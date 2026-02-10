@@ -398,7 +398,7 @@ const filteredNotes = notes.filter((n) => {
   <tr className="text-left border-b border-gray-700 text-gray-200">
     <th className="py-3 w-[90px]">Nummer</th>
     <th className="py-3 w-[110px]">Datum</th>
-    <th className="py-3 w-[220px]">Kunde</th>
+    <th className="py-3 w-[180px]">Kunde</th>
     {role === "office" && <th className="py-3 w-[220px]">Erstellt von</th>}
     <th className="py-3 w-[120px]">Status</th>
     <th className="py-3 w-[160px] text-right">Aktionen</th>
