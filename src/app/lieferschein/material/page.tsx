@@ -9,12 +9,20 @@ type Material = {
   name: string;
 };
 
+type MaterialEntryRow = {
+  id: string;
+  qty: number;
+  unit: string;
+  materials: Material[] | Material | null;
+};
+
 type MaterialEntry = {
   id: string;
   qty: number;
   unit: string;
-  materials: Material;
+  materials: Material | null;
 };
+
 
 export default function MaterialPage() {
   const [deliveryNoteId, setDeliveryNoteId] = useState<string | null>(null);
@@ -52,15 +60,29 @@ const [showNewMaterial, setShowNewMaterial] = useState(false);
     else setMaterials(data ?? []);
   };
 
-  const loadEntries = async (noteId: string) => {
-    const { data, error } = await supabase
-      .from("delivery_material_entries")
-      .select("id,qty,unit,materials(id,name)")
-      .eq("delivery_note_id", noteId);
+const loadEntries = async (noteId: string) => {
+  const { data, error } = await supabase
+    .from("delivery_material_entries")
+    .select("id,qty,unit,materials(id,name)")
+    .eq("delivery_note_id", noteId);
 
-    if (error) setError(error.message);
-    else setEntries(data ?? []);
-  };
+  if (error) {
+    setError(error.message);
+    return;
+  }
+
+  const rows = (data ?? []) as MaterialEntryRow[];
+
+  const normalized: MaterialEntry[] = rows.map((r) => ({
+    id: r.id,
+    qty: r.qty,
+    unit: r.unit,
+    materials: Array.isArray(r.materials) ? r.materials[0] ?? null : r.materials,
+  }));
+
+  setEntries(normalized);
+};
+
 
   const addEntry = async () => {
     if (!deliveryNoteId || !selectedMaterialId || !qty || !unit.trim()) return;
@@ -173,9 +195,10 @@ const [showNewMaterial, setShowNewMaterial] = useState(false);
                 key={e.id}
                 className="flex justify-between items-center border p-2 rounded"
               >
-                <span>
-                  {e.materials.name} – {e.qty} {e.unit}
-                </span>
+				<span>
+					{e.materials?.name ?? "—"} – {e.qty} {e.unit}
+				</span>
+
                 <button
                   onClick={() => removeEntry(e.id)}
                   className="text-red-600 text-sm"

@@ -69,36 +69,43 @@ export async function GET(req: NextRequest) {
         .select("qty,unit, materials(name)")
         .eq("delivery_note_id", n.id),
     ]);
+    const pdfBytes = await buildDeliveryNotePdf({
+      noteNumber: String(n.note_number ?? "XXX"),
+      noteDate: n.note_date,
 
-customer: (() => {
-  const c = Array.isArray(n.customers) ? n.customers[0] : n.customers;
-  return c
-    ? {
-        name: c.name ?? null,
-        street: c.street ?? null,
-        zip: c.zip ?? null,
-        city: c.city ?? null,
-        email: c.email ?? null,
-      }
-    : null;
-})(),
+      customer: (() => {
+        const c = Array.isArray(n.customers) ? n.customers[0] : n.customers;
+        return c
+          ? {
+              name: c.name ?? null,
+              street: c.street ?? null,
+              zip: c.zip ?? null,
+              city: c.city ?? null,
+              email: c.email ?? null,
+            }
+          : null;
+      })(),
 
       workers: (workers ?? []).map((w: any) => ({
         name: w.workers?.name ?? "",
         hours: w.hours ?? null,
       })),
+
       machines: (machines ?? []).map((m: any) => ({
         name: m.machines?.name ?? "",
         qty: m.qty ?? null,
         unit: m.unit ?? null,
       })),
+
       materials: (materials ?? []).map((m: any) => ({
         name: m.materials?.name ?? "",
         qty: m.qty ?? null,
         unit: m.unit ?? null,
       })),
+
       signatureDataUrl: n.signature ?? null,
     });
+
 
 	const formatDateAT = (iso: string | null) => {
 	if (!iso) return "XX_XX_XXXX";
@@ -109,23 +116,27 @@ customer: (() => {
 	return `${dd}.${mm}.${yyyy}`;
 	};
 
-    const nr = String(n.note_number ?? "XXX");
-    const kunde = String(n.customers?.name ?? "Unbekannt")
-      .replace(/[^\w\d]+/g, "_")
-      .replace(/^_|_$/g, "");
-	const noteDate = String(n.note_date ?? "XXX")
-		.replace(/\./g, "_");
+const c = Array.isArray(n.customers) ? n.customers[0] : n.customers;
+const kunde = String(c?.name ?? "Unbekannt")
+  .replace(/[^\w\d]+/g, "_")
+  .replace(/^_|_$/g, "");
 
+const nr = String(n.note_number ?? "XXX");
 
-    zip.file(`${nr}_${kunde}_${noteDate}.pdf`, pdfBytes);
+const noteDate = String(n.note_date ?? "XXX").replace(/\./g, "_");
+
+zip.file(`${nr}_${kunde}_${noteDate}.pdf`, pdfBytes);
+
   } // ✅ for-loop zu
 
-  const zipBytes = await zip.generateAsync({ type: "uint8array" });
+const zipBytes = await zip.generateAsync({ type: "uint8array" });
+const buf = Buffer.from(zipBytes);
 
-  return new Response(zipBytes, {
-    headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${zipName}"`,
-    },
-  });
-} // 
+return new Response(buf, {
+  headers: {
+    "Content-Type": "application/zip",
+    "Content-Disposition": `attachment; filename="${zipName}"`,
+  },
+});
+
+}

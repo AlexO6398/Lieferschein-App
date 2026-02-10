@@ -41,40 +41,57 @@ export async function POST(req: Request) {
       return Response.json({ error: "Lieferschein nicht gefunden" }, { status: 404 });
     }
 
+    // customers kann bei Supabase je nach Relation als Array kommen -> normalisieren
+    const customerRaw = (note as any).customers;
+    const customerObj = Array.isArray(customerRaw) ? customerRaw[0] : customerRaw;
+
     // Positionen laden
-    const { data: workers } = await supabase
-      .from("delivery_worker_entries")
-      .select("hours, workers(name)")
-      .eq("delivery_note_id", deliveryNoteId);
-
-    const { data: machines } = await supabase
-      .from("delivery_machine_entries")
-      .select("qty,unit, machines(name)")
-      .eq("delivery_note_id", deliveryNoteId);
-
-    const { data: materials } = await supabase
-      .from("delivery_material_entries")
-      .select("qty,unit, materials(name)")
-      .eq("delivery_note_id", deliveryNoteId);
+    const [{ data: workers }, { data: machines }, { data: materials }] = await Promise.all([
+      supabase
+        .from("delivery_worker_entries")
+        .select("hours, workers(name)")
+        .eq("delivery_note_id", deliveryNoteId),
+      supabase
+        .from("delivery_machine_entries")
+        .select("qty,unit, machines(name)")
+        .eq("delivery_note_id", deliveryNoteId),
+      supabase
+        .from("delivery_material_entries")
+        .select("qty,unit, materials(name)")
+        .eq("delivery_note_id", deliveryNoteId),
+    ]);
 
     // Nummer im PDF anzeigen (wenn noch keine da ist -> Hinweistext)
     const noteNumber =
-      note.note_number ? String(note.note_number) : "wird beim Abschließen vergeben";
+      (note as any).note_number ? String((note as any).note_number) : "wird beim Abschließen vergeben";
 
     const pdfBytes = await buildDeliveryNotePdf({
       noteNumber,
-      noteDate: note.note_date ?? null,
-      customer: note.customers ?? null,
-      signatureDataUrl: note.signature ?? null,
+      noteDate: (note as any).note_date ?? null,
+
+      customer: customerObj
+        ? {
+            name: customerObj.name ?? null,
+            street: customerObj.street ?? null,
+            zip: customerObj.zip ?? null,
+            city: customerObj.city ?? null,
+            email: customerObj.email ?? null,
+          }
+        : null,
+
+      signatureDataUrl: (note as any).signature ?? null,
+
       workers: (workers ?? []).map((w: any) => ({
         name: w.workers?.name ?? "",
         hours: w.hours ?? null,
       })),
+
       machines: (machines ?? []).map((m: any) => ({
         name: m.machines?.name ?? "",
         qty: m.qty ?? null,
         unit: m.unit ?? null,
       })),
+
       materials: (materials ?? []).map((m: any) => ({
         name: m.materials?.name ?? "",
         qty: m.qty ?? null,
@@ -82,16 +99,16 @@ export async function POST(req: Request) {
       })),
     });
 
-    return new Response(pdfBytes, {
+    // ✅ Response Body robust machen (wichtig für TS + Vercel)
+    const body = pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes as any);
+
+    return new Response(body.buffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="lieferschein.pdf"`,
       },
     });
   } catch (err: any) {
-    return Response.json(
-      { error: err.message ?? "PDF Fehler" },
-      { status: 500 }
-    );
+    return Response.json({ error: err.message ?? "PDF Fehler" }, { status: 500 });
   }
 }

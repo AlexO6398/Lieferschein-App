@@ -9,11 +9,19 @@ type Machine = {
   name: string;
 };
 
+type MachineEntryRow = {
+  id: string;
+  qty: number;
+  unit: string;
+  // Supabase kann hier (je nach Relation) Array oder Objekt liefern – wir fangen beides ab
+  machines: Machine[] | Machine | null;
+};
+
 type MachineEntry = {
   id: string;
   qty: number;
   unit: string;
-  machines: Machine;
+  machines: Machine | null;
 };
 
 export default function GeraetePage() {
@@ -23,12 +31,11 @@ export default function GeraetePage() {
   const [selectedMachineId, setSelectedMachineId] = useState("");
   const [qty, setQty] = useState("");
   const [unit, setUnit] = useState("Std.");
-const [showNewMachine, setShowNewMachine] = useState(false);
+  const [showNewMachine, setShowNewMachine] = useState(false);
 
   const [entries, setEntries] = useState<MachineEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // neues Gerät
   const [newName, setNewName] = useState("");
 
   useEffect(() => {
@@ -49,7 +56,7 @@ const [showNewMachine, setShowNewMachine] = useState(false);
       .order("name");
 
     if (error) setError(error.message);
-    else setMachines(data ?? []);
+    else setMachines((data ?? []) as Machine[]);
   };
 
   const loadEntries = async (noteId: string) => {
@@ -58,8 +65,21 @@ const [showNewMachine, setShowNewMachine] = useState(false);
       .select("id,qty,unit,machines(id,name)")
       .eq("delivery_note_id", noteId);
 
-    if (error) setError(error.message);
-    else setEntries(data ?? []);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    const rows = (data ?? []) as MachineEntryRow[];
+
+    const normalized: MachineEntry[] = rows.map((r) => ({
+      id: r.id,
+      qty: r.qty,
+      unit: r.unit,
+      machines: Array.isArray(r.machines) ? r.machines[0] ?? null : r.machines,
+    }));
+
+    setEntries(normalized);
   };
 
   const addEntry = async () => {
@@ -111,10 +131,10 @@ const [showNewMachine, setShowNewMachine] = useState(false);
 
   return (
     <main className="min-h-screen p-6 bg-gray-100">
-<div className="max-w-xl mx-auto bg-white p-6 rounded shadow flex flex-col min-h-[80vh]">
+      <div className="max-w-xl mx-auto bg-white p-6 rounded shadow flex flex-col min-h-[80vh]">
         <h1 className="text-2xl font-bold">Lieferschein – Geräte & Maschinen</h1>
 
-<WizardSteps currentKey="geraete" />
+        <WizardSteps currentKey="geraete" />
 
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -174,7 +194,7 @@ const [showNewMachine, setShowNewMachine] = useState(false);
                 className="flex justify-between items-center border p-2 rounded"
               >
                 <span>
-                  {e.machines.name} – {e.qty} {e.unit}
+                  {(e.machines?.name ?? "—")} – {e.qty} {e.unit}
                 </span>
                 <button
                   onClick={() => removeEntry(e.id)}
@@ -190,39 +210,37 @@ const [showNewMachine, setShowNewMachine] = useState(false);
         {/* Neues Gerät */}
         <hr className="my-6" />
 
-<button
-  type="button"
-  onClick={() => setShowNewMachine((v) => !v)}
-  className="mt-6 flex items-center gap-2 text-sm font-medium"
->
-  {showNewMachine ? "▼" : "▶"} Neues Gerät anlegen
-</button>
-
-{showNewMachine && (
-  <div className="mt-4 border rounded p-4 bg-gray-50">
-
-        <input
-          className="w-full border p-2 rounded mt-2"
-          placeholder="Gerätename (z.B. Bagger, Radlader)"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-
         <button
-          onClick={addMachine}
-          className="mt-2 bg-gray-700 text-white py-2 px-4 rounded"
+          type="button"
+          onClick={() => setShowNewMachine((v) => !v)}
+          className="mt-6 flex items-center gap-2 text-sm font-medium"
         >
-          Gerät speichern
+          {showNewMachine ? "▼" : "▶"} Neues Gerät anlegen
         </button>
 
-  </div>
-)}
+        {showNewMachine && (
+          <div className="mt-4 border rounded p-4 bg-gray-50">
+            <input
+              className="w-full border p-2 rounded mt-2"
+              placeholder="Gerätename (z.B. Bagger, Radlader)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
 
-<WizardButtons
-  canGoNext={true}
-  onBack={() => (window.location.href = "/lieferschein/mitarbeiter")}
-  onNext={() => (window.location.href = "/lieferschein/material")}
-/>
+            <button
+              onClick={addMachine}
+              className="mt-2 bg-gray-700 text-white py-2 px-4 rounded"
+            >
+              Gerät speichern
+            </button>
+          </div>
+        )}
+
+        <WizardButtons
+          canGoNext={true}
+          onBack={() => (window.location.href = "/lieferschein/mitarbeiter")}
+          onNext={() => (window.location.href = "/lieferschein/material")}
+        />
       </div>
     </main>
   );

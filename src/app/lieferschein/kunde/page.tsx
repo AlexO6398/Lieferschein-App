@@ -132,12 +132,8 @@ useEffect(() => {
       <div className="max-w-xl mx-auto bg-white rounded shadow p-6 flex flex-col min-h-[80vh]">
 
 
-<WizardSteps
-  currentKey="kunde"
-  canGoNext={!!selectedCustomerId}
-  onBack={() => (window.location.href = "/")}
-  onNext={() => (window.location.href = "/lieferschein/mitarbeiter")}
-/>
+<WizardSteps currentKey="kunde" />
+
 
 
         <h1 className="text-2xl font-bold">Lieferschein – Kunde</h1>

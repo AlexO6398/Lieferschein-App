@@ -187,7 +187,11 @@ const openPdf = async (id: string) => {
   }
 
   const nr = String(meta?.note_number ?? "LS_XXX");
-  const kunde = sanitize(String(meta?.customers?.name ?? "Unbekannt"));
+const customerObj =
+  Array.isArray(meta?.customers) ? meta.customers[0] : meta?.customers;
+
+const kunde = sanitize(String(customerObj?.name ?? "Unbekannt"));
+
   const date = sanitize(formatDateAT(meta?.note_date).replace(/\./g, "_"));
   const filename = `${nr}_${kunde}_${date}.pdf`;
 

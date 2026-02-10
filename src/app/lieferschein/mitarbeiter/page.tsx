@@ -11,11 +11,18 @@ type Worker = {
   role: string | null;
 };
 
+type WorkerEntryRow = {
+  id: string;
+  hours: number;
+  workers: Worker[] | Worker | null;
+};
+
 type WorkerEntry = {
   id: string;
   hours: number;
-  workers: Worker;
+  workers: Worker | null;
 };
+
 
 export default function MitarbeiterPage() {
   const [deliveryNoteId, setDeliveryNoteId] = useState<string | null>(null);
@@ -53,15 +60,28 @@ export default function MitarbeiterPage() {
     else setWorkers(data ?? []);
   };
 
-  const loadEntries = async (noteId: string) => {
-    const { data, error } = await supabase
-      .from("delivery_worker_entries")
-      .select("id,hours,workers(id,name,role)")
-      .eq("delivery_note_id", noteId);
+const loadEntries = async (noteId: string) => {
+  const { data, error } = await supabase
+    .from("delivery_worker_entries")
+    .select("id,hours,workers(id,name,role)")
+    .eq("delivery_note_id", noteId);
 
-    if (error) setError(error.message);
-    else setEntries(data ?? []);
-  };
+  if (error) {
+    setError(error.message);
+    return;
+  }
+
+  const rows = (data ?? []) as WorkerEntryRow[];
+
+  const normalized: WorkerEntry[] = rows.map((r) => ({
+    id: r.id,
+    hours: r.hours,
+    workers: Array.isArray(r.workers) ? r.workers[0] ?? null : r.workers,
+  }));
+
+  setEntries(normalized);
+};
+
 
   const addEntry = async () => {
     if (!deliveryNoteId || !selectedWorkerId || !hours) return;
@@ -170,7 +190,7 @@ export default function MitarbeiterPage() {
                 className="flex justify-between items-center border p-2 rounded"
               >
                 <span>
-                  {e.workers.name} – {e.hours} Std.
+                  {e.workers?.name ?? "—"} – {e.hours} Std.
                 </span>
                 <button
                   onClick={() => removeEntry(e.id)}
