@@ -458,6 +458,8 @@ i % 2 === 1 ? "bg-gray-800/40" : "bg-transparent",
   <td className="py-3 text-right">
 <div className="flex flex-col gap-2 items-end">
 
+
+{n.status !== "final" && (
       <button
         onClick={() => openNote(n.id, n.status)}
 className="px-3 py-3 w-[140px] rounded bg-black text-white"
@@ -465,9 +467,9 @@ className="px-3 py-3 w-[140px] rounded bg-black text-white"
       >
         Einsatz Öffnen
       </button>
+)}
 
-
-{n.status !== "final" && (
+{n.status !== "draft" && (
       <button
         onClick={() => openPdf(n.id)}
 className="px-3 py-3 w-[140px] rounded border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-100"
