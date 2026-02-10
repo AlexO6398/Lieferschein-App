@@ -273,7 +273,7 @@ const filteredNotes = notes.filter((n) => {
 
   return (
     <main className="min-h-screen p-6 bg-gray-900 text-gray-100">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="bg-gray-800/80 border border-gray-700 rounded-xl shadow-lg p-6">
 <div className="flex items-start justify-between gap-4">
   <div className="flex items-center gap-3">
@@ -284,7 +284,7 @@ const filteredNotes = notes.filter((n) => {
       onError={(e) => ((e.currentTarget.style.display = "none"))}
     />
     <div>
-      <h1 className="text-2xl font-bold">Lieferschein</h1>
+      <h1 className="text-3xl font-bold">Lieferschein</h1>
       <p className="text-sm text-gray-300/80">Digitale Lieferscheine · {role}</p>
     </div>
   </div>
@@ -398,9 +398,9 @@ const filteredNotes = notes.filter((n) => {
   <tr className="text-left border-b border-gray-700 text-gray-200">
     <th className="py-3 w-[110px]">Nummer</th>
     <th className="py-3 w-[80px]">Datum</th>
-    <th className="py-3 w-[150px]">Kunde</th>
+    <th className="py-3 w-[120px]">Kunde</th>
     {role === "office" && <th className="py-3 w-[150px]">Erstellt von</th>}
-    <th className="py-3 w-[100px]">Status</th>
+    <th className="py-3 w-[110px]">Status</th>
     <th className="py-3 w-[140px] text-right">Aktionen</th>
   </tr>
 </thead>
