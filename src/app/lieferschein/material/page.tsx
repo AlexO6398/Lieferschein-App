@@ -23,7 +23,6 @@ type MaterialEntry = {
   materials: Material | null;
 };
 
-
 export default function MaterialPage() {
   const [deliveryNoteId, setDeliveryNoteId] = useState<string | null>(null);
 
@@ -31,12 +30,11 @@ export default function MaterialPage() {
   const [selectedMaterialId, setSelectedMaterialId] = useState("");
   const [qty, setQty] = useState("");
   const [unit, setUnit] = useState("m³");
-const [showNewMaterial, setShowNewMaterial] = useState(false);
+  const [showNewMaterial, setShowNewMaterial] = useState(false);
 
   const [entries, setEntries] = useState<MaterialEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // neues Material
   const [newName, setNewName] = useState("");
 
   useEffect(() => {
@@ -60,29 +58,30 @@ const [showNewMaterial, setShowNewMaterial] = useState(false);
     else setMaterials(data ?? []);
   };
 
-const loadEntries = async (noteId: string) => {
-  const { data, error } = await supabase
-    .from("delivery_material_entries")
-    .select("id,qty,unit,materials(id,name)")
-    .eq("delivery_note_id", noteId);
+  const loadEntries = async (noteId: string) => {
+    const { data, error } = await supabase
+      .from("delivery_material_entries")
+      .select("id,qty,unit,materials(id,name)")
+      .eq("delivery_note_id", noteId);
 
-  if (error) {
-    setError(error.message);
-    return;
-  }
+    if (error) {
+      setError(error.message);
+      return;
+    }
 
-  const rows = (data ?? []) as MaterialEntryRow[];
+    const rows = (data ?? []) as MaterialEntryRow[];
 
-  const normalized: MaterialEntry[] = rows.map((r) => ({
-    id: r.id,
-    qty: r.qty,
-    unit: r.unit,
-    materials: Array.isArray(r.materials) ? r.materials[0] ?? null : r.materials,
-  }));
+    const normalized: MaterialEntry[] = rows.map((r) => ({
+      id: r.id,
+      qty: r.qty,
+      unit: r.unit,
+      materials: Array.isArray(r.materials)
+        ? r.materials[0] ?? null
+        : r.materials,
+    }));
 
-  setEntries(normalized);
-};
-
+    setEntries(normalized);
+  };
 
   const addEntry = async () => {
     if (!deliveryNoteId || !selectedMaterialId || !qty || !unit.trim()) return;
@@ -132,23 +131,25 @@ const loadEntries = async (noteId: string) => {
   };
 
   return (
-    <main className="min-h-screen p-6 bg-gray-100">
-<div className="max-w-xl mx-auto bg-white p-6 rounded shadow flex flex-col min-h-[80vh]">
+    <main className="min-h-screen p-6 bg-gray-900 text-gray-100">
+      <div className="max-w-xl mx-auto bg-gray-800/80 border border-gray-700 p-6 rounded-xl shadow-lg flex flex-col min-h-[80vh]">
         <h1 className="text-2xl font-bold">Lieferschein – Material</h1>
 
-<WizardSteps currentKey="material" />
+        <WizardSteps currentKey="material" />
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+          <div className="mt-4 p-3 bg-red-900/40 border border-red-700 text-red-200 rounded">
             {error}
           </div>
         )}
 
         {/* Material hinzufügen */}
         <div className="mt-6">
-          <label className="block font-medium">Material auswählen</label>
+          <label className="block font-medium text-gray-200">
+            Material auswählen
+          </label>
           <select
-            className="w-full border p-2 rounded mt-1"
+            className="w-full mt-1 rounded bg-gray-900 border border-gray-700 p-2 text-gray-100"
             value={selectedMaterialId}
             onChange={(e) => setSelectedMaterialId(e.target.value)}
           >
@@ -165,13 +166,13 @@ const loadEntries = async (noteId: string) => {
               type="number"
               step="0.01"
               placeholder="Menge"
-              className="w-full border p-2 rounded"
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-gray-100 placeholder:text-gray-400"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
             />
             <input
               placeholder="Einheit (z.B. m³, t, kg)"
-              className="w-full border p-2 rounded"
+              className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-gray-100 placeholder:text-gray-400"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
             />
@@ -179,7 +180,7 @@ const loadEntries = async (noteId: string) => {
 
           <button
             onClick={addEntry}
-            className="mt-2 bg-black text-white py-2 px-4 rounded"
+            className="mt-2 bg-gray-100 text-gray-900 py-2 px-4 rounded hover:bg-white"
           >
             Hinzufügen
           </button>
@@ -188,20 +189,23 @@ const loadEntries = async (noteId: string) => {
         {/* Liste */}
         <div className="mt-6">
           <h2 className="font-semibold mb-2">Erfasstes Material</h2>
-          {entries.length === 0 && <p className="text-sm">Noch keine Einträge.</p>}
+          {entries.length === 0 && (
+            <p className="text-sm text-gray-300">
+              Noch keine Einträge.
+            </p>
+          )}
           <ul className="space-y-2">
             {entries.map((e) => (
               <li
                 key={e.id}
-                className="flex justify-between items-center border p-2 rounded"
+                className="flex justify-between items-center border border-gray-700 bg-gray-900/60 p-2 rounded"
               >
-				<span>
-					{e.materials?.name ?? "—"} – {e.qty} {e.unit}
-				</span>
-
+                <span>
+                  {e.materials?.name ?? "—"} – {e.qty} {e.unit}
+                </span>
                 <button
                   onClick={() => removeEntry(e.id)}
-                  className="text-red-600 text-sm"
+                  className="text-red-400 text-sm hover:text-red-300"
                 >
                   entfernen
                 </button>
@@ -211,44 +215,40 @@ const loadEntries = async (noteId: string) => {
         </div>
 
         {/* Neues Material */}
-        <hr className="my-6" />
-<button
-  type="button"
-  onClick={() => setShowNewMaterial((v) => !v)}
-  className="mt-6 flex items-center gap-2 text-sm font-medium"
->
-  {showNewMaterial ? "▼" : "▶"} Neues Material anlegen
-</button>
-
-{showNewMaterial && (
-  <div className="mt-4 border rounded p-4 bg-gray-50">
-
-        <input
-          className="w-full border p-2 rounded mt-2"
-          placeholder="Materialname (z.B. Sand, Kies, Humus)"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
+        <hr className="my-6 border-gray-700" />
 
         <button
-          onClick={addMaterial}
-          className="mt-2 bg-gray-700 text-white py-2 px-4 rounded"
+          type="button"
+          onClick={() => setShowNewMaterial((v) => !v)}
+          className="mt-6 flex items-center gap-2 text-sm font-medium text-gray-200"
         >
-          Material speichern
+          {showNewMaterial ? "▼" : "▶"} Neues Material anlegen
         </button>
 
-  </div>
-)}
+        {showNewMaterial && (
+          <div className="mt-4 border border-gray-700 rounded p-4 bg-gray-900/60">
+            <input
+              className="w-full border border-gray-700 bg-gray-900 p-2 rounded mt-2 text-gray-100 placeholder:text-gray-400"
+              placeholder="Materialname (z.B. Sand, Kies, Humus)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
 
-<WizardButtons
-  canGoNext={true}
-  onBack={() => (window.location.href = "/lieferschein/geraete")}
-  onNext={() => (window.location.href = "/lieferschein/zusammenfassung")}
-/>      
+            <button
+              onClick={addMaterial}
+              className="mt-2 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded"
+            >
+              Material speichern
+            </button>
+          </div>
+        )}
 
-</div>
-
-
+        <WizardButtons
+          canGoNext={true}
+          onBack={() => (window.location.href = "/lieferschein/geraete")}
+          onNext={() => (window.location.href = "/lieferschein/zusammenfassung")}
+        />
+      </div>
     </main>
   );
 }

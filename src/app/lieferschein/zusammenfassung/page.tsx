@@ -15,8 +15,6 @@ export default function ZusammenfassungPage() {
   const [noteNumber, setNoteNumber] = useState<string | null>(null);
   const [hasSignature, setHasSignature] = useState(false);
 
-
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -31,7 +29,6 @@ export default function ZusammenfassungPage() {
   }, []);
 
   const loadAll = async (id: string) => {
-    // Kunde
     const { data: note } = await supabase
       .from("delivery_notes")
       .select("note_number, customer_id, customers(name,street,zip,city,email)")
@@ -41,21 +38,18 @@ export default function ZusammenfassungPage() {
     setNoteNumber(note?.note_number ?? null);
     setCustomer(note?.customers);
 
-    // Mitarbeiter
     const { data: w } = await supabase
       .from("delivery_worker_entries")
       .select("hours, workers(name)")
       .eq("delivery_note_id", id);
     setWorkers(w ?? []);
 
-    // Geräte
     const { data: g } = await supabase
       .from("delivery_machine_entries")
       .select("qty,unit, machines(name)")
       .eq("delivery_note_id", id);
     setMachines(g ?? []);
 
-    // Material
     const { data: m } = await supabase
       .from("delivery_material_entries")
       .select("qty,unit, materials(name)")
@@ -63,13 +57,11 @@ export default function ZusammenfassungPage() {
     setMaterials(m ?? []);
   };
 
-  // Unterschrift
   const startDraw = () => (drawing.current = true);
-const endDraw = () => {
-  drawing.current = false;
-  setHasSignature(true);
-};
-
+  const endDraw = () => {
+    drawing.current = false;
+    setHasSignature(true);
+  };
 
   const draw = (e: any) => {
     if (!drawing.current) return;
@@ -87,106 +79,102 @@ const endDraw = () => {
     ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
   };
 
-const clearSignature = () => {
-  const canvas = canvasRef.current!;
-  canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
-  setHasSignature(false);
-};
+  const clearSignature = () => {
+    const canvas = canvasRef.current!;
+    canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+  };
 
+  const finalize = async () => {
+    if (!deliveryNoteId) return;
 
-const finalize = async () => {
-  if (!deliveryNoteId) return;
+    setError(null);
+    setSaving(true);
 
-  setError(null);
-  setSaving(true);
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        setError("Unterschrift-Feld fehlt.");
+        setSaving(false);
+        return;
+      }
 
-  try {
-    // 1) Unterschrift aus Canvas holen
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      setError("Unterschrift-Feld fehlt.");
-      setSaving(false);
-      return;
+      const dataUrl = canvas.toDataURL("image/png");
+
+      if (!dataUrl || dataUrl.length < 2000) {
+        setError("Keine Unterschrift vorhanden");
+        setSaving(false);
+        return;
+      }
+
+      const { error: sigErr } = await supabase
+        .from("delivery_notes")
+        .update({ signature: dataUrl })
+        .eq("id", deliveryNoteId);
+
+      if (sigErr) {
+        setError("Unterschrift konnte nicht gespeichert werden: " + sigErr.message);
+        setSaving(false);
+        return;
+      }
+
+      const res = await fetch("/api/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryNoteId }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(json.error ?? "Fehler beim Abschließen");
+      } else {
+        alert("Erfolgreich Abgeschlossen ✅");
+        localStorage.removeItem("deliveryNoteId");
+        window.location.href = "/";
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Fehler");
     }
 
-    const dataUrl = canvas.toDataURL("image/png");
-
-    // Optional: leere Unterschrift erkennen (quick & dirty)
-    // Wenn du willst, machen wir das später "perfekt"
-    if (!dataUrl || dataUrl.length < 2000) {
-      setError("Keine Unterschrift vorhanden");
-      setSaving(false);
-      return;
-    }
-
-    // 2) In DB speichern
-    const { error: sigErr } = await supabase
-      .from("delivery_notes")
-      .update({ signature: dataUrl })
-      .eq("id", deliveryNoteId);
-
-    if (sigErr) {
-      setError("Unterschrift konnte nicht gespeichert werden: " + sigErr.message);
-      setSaving(false);
-      return;
-    }
-
-    // 3) Finalize API call
-    const res = await fetch("/api/finalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deliveryNoteId }),
-    });
-
-    const json = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      setError(json.error ?? "Fehler beim Abschließen");
-    } else {
-      alert("Erfolgreich Abgeschlossen ✅");
-      localStorage.removeItem("deliveryNoteId");
-      window.location.href = "/";
-    }
-  } catch (e: any) {
-    setError(e.message ?? "Fehler");
-  }
-
-  setSaving(false);
-};
-
-
+    setSaving(false);
+  };
 
   return (
-    <main className="min-h-screen p-6 bg-gray-100">
-<div className="max-w-xl mx-auto bg-white p-6 rounded shadow flex flex-col min-h-[80vh]">
+    <main className="min-h-screen p-6 bg-gray-900 text-gray-100">
+      <div className="max-w-xl mx-auto bg-gray-800/80 border border-gray-700 p-6 rounded-xl shadow-lg flex flex-col min-h-[80vh]">
         <h1 className="text-2xl font-bold">Zusammenfassung</h1>
 
-<WizardSteps currentKey="zusammenfassung" />
+        <WizardSteps currentKey="zusammenfassung" />
 
-<div className="mt-2 text-sm text-gray-700">
-  <strong>Nummer:</strong>{" "}
-  {noteNumber ? (
-    <span>{noteNumber}</span>
-  ) : (
-    <span className="text-gray-400 italic">wird beim Abschließen vergeben</span>
-  )}
-</div>
-
+        <div className="mt-2 text-sm text-gray-300">
+          <strong>Nummer:</strong>{" "}
+          {noteNumber ? (
+            <span>{noteNumber}</span>
+          ) : (
+            <span className="text-gray-400 italic">
+              wird beim Abschließen vergeben
+            </span>
+          )}
+        </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 text-red-700 rounded">
+          <div className="mt-4 p-3 bg-red-900/40 border border-red-700 text-red-200 rounded">
             {error}
           </div>
         )}
 
         {/* Kunde */}
         <section className="mt-6">
-          <h2 className="font-semibold">Kunde</h2>
+          <h2 className="font-semibold text-gray-200">Kunde</h2>
           {customer && (
-            <p>
-              {customer.name}<br />
-              {customer.street}<br />
-              {customer.zip} {customer.city}<br />
+            <p className="text-gray-300">
+              {customer.name}
+              <br />
+              {customer.street}
+              <br />
+              {customer.zip} {customer.city}
+              <br />
               {customer.email}
             </p>
           )}
@@ -194,42 +182,48 @@ const finalize = async () => {
 
         {/* Mitarbeiter */}
         <section className="mt-6">
-          <h2 className="font-semibold">Mitarbeiter</h2>
-          <ul>
+          <h2 className="font-semibold text-gray-200">Mitarbeiter</h2>
+          <ul className="text-gray-300">
             {workers.map((w, i) => (
-              <li key={i}>{w.workers.name} – {w.hours} Std.</li>
+              <li key={i}>
+                {w.workers.name} – {w.hours} Std.
+              </li>
             ))}
           </ul>
         </section>
 
         {/* Geräte */}
         <section className="mt-6">
-          <h2 className="font-semibold">Geräte</h2>
-          <ul>
+          <h2 className="font-semibold text-gray-200">Geräte</h2>
+          <ul className="text-gray-300">
             {machines.map((g, i) => (
-              <li key={i}>{g.machines.name} – {g.qty} {g.unit}</li>
+              <li key={i}>
+                {g.machines.name} – {g.qty} {g.unit}
+              </li>
             ))}
           </ul>
         </section>
 
         {/* Material */}
         <section className="mt-6">
-          <h2 className="font-semibold">Material</h2>
-          <ul>
+          <h2 className="font-semibold text-gray-200">Material</h2>
+          <ul className="text-gray-300">
             {materials.map((m, i) => (
-              <li key={i}>{m.materials.name} – {m.qty} {m.unit}</li>
+              <li key={i}>
+                {m.materials.name} – {m.qty} {m.unit}
+              </li>
             ))}
           </ul>
         </section>
 
         {/* Unterschrift */}
         <section className="mt-6">
-          <h2 className="font-semibold">Unterschrift Kunde</h2>
+          <h2 className="font-semibold text-gray-200">Unterschrift Kunde</h2>
           <canvas
             ref={canvasRef}
             width={400}
             height={150}
-            className="border mt-2"
+            className="border border-gray-700 bg-gray-100 mt-2"
             onMouseDown={startDraw}
             onMouseUp={endDraw}
             onMouseMove={draw}
@@ -237,32 +231,26 @@ const finalize = async () => {
           />
           <button
             onClick={clearSignature}
-            className="mt-2 text-sm text-red-600"
+            className="mt-2 text-sm text-red-400 hover:text-red-300"
           >
             Unterschrift löschen
           </button>
         </section>
 
-{(!customer || !hasSignature) && (
-  <p className="text-sm text-red-600 mt-2">
-    Bitte Kunde auswählen und unterschreiben, um abzuschließen.
-  </p>
-)}
+        {(!customer || !hasSignature) && (
+          <p className="text-sm text-red-300 mt-2">
+            Bitte Kunde auswählen und unterschreiben, um abzuschließen.
+          </p>
+        )}
 
-
-<WizardButtons
-  canGoNext={!saving && customer && hasSignature}
-  backLabel="Zurück"
-  nextLabel="Abschließen"
-  onBack={() => (window.location.href = "/lieferschein/material")}
-  onNext={finalize}
-/>
-    
-
- </div>
-
-
-
+        <WizardButtons
+          canGoNext={!saving && customer && hasSignature}
+          backLabel="Zurück"
+          nextLabel="Abschließen"
+          onBack={() => (window.location.href = "/lieferschein/material")}
+          onNext={finalize}
+        />
+      </div>
     </main>
   );
 }
