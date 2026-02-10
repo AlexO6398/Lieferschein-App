@@ -57,27 +57,46 @@ export default function ZusammenfassungPage() {
     setMaterials(m ?? []);
   };
 
-  const startDraw = () => (drawing.current = true);
-  const endDraw = () => {
-    drawing.current = false;
-    setHasSignature(true);
-  };
+const startDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  drawing.current = true;
 
-  const draw = (e: any) => {
-    if (!drawing.current) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    const rect = canvas.getBoundingClientRect();
+  const canvas = canvasRef.current!;
+  const ctx = canvas.getContext("2d")!;
+  const rect = canvas.getBoundingClientRect();
 
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "black";
+  // Startpunkt setzen (sonst zieht er manchmal von (0,0))
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
 
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  };
+  // Pointer "capturen", damit Zeichnen nicht abbricht wenn Finger raus rutscht
+  (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
+};
+
+const endDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  drawing.current = false;
+  setHasSignature(true);
+  try {
+    (e.currentTarget as HTMLCanvasElement).releasePointerCapture(e.pointerId);
+  } catch {}
+};
+
+const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  if (!drawing.current) return;
+
+  const canvas = canvasRef.current!;
+  const ctx = canvas.getContext("2d")!;
+  const rect = canvas.getBoundingClientRect();
+
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "black";
+
+  ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+};
+
 
   const clearSignature = () => {
     const canvas = canvasRef.current!;
@@ -219,16 +238,17 @@ export default function ZusammenfassungPage() {
         {/* Unterschrift */}
         <section className="mt-6">
           <h2 className="font-semibold text-gray-200">Unterschrift Kunde</h2>
-          <canvas
-            ref={canvasRef}
-            width={400}
-            height={150}
-            className="border border-gray-700 bg-gray-100 mt-2"
-            onMouseDown={startDraw}
-            onMouseUp={endDraw}
-            onMouseMove={draw}
-            onMouseLeave={endDraw}
-          />
+<canvas
+  ref={canvasRef}
+  width={400}
+  height={150}
+  className="border border-gray-700 bg-gray-100 mt-2 w-full max-w-[400px] rounded touch-none select-none"
+  onPointerDown={startDraw}
+  onPointerUp={endDraw}
+  onPointerMove={draw}
+  onPointerLeave={endDraw}
+/>
+
           <button
             onClick={clearSignature}
             className="mt-2 text-sm text-red-400 hover:text-red-300"
