@@ -466,6 +466,8 @@ className="px-3 py-3 w-[140px] rounded bg-black text-white"
         Einsatz Öffnen
       </button>
 
+
+{n.status !== "final" && (
       <button
         onClick={() => openPdf(n.id)}
 className="px-3 py-3 w-[140px] rounded border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-100"
@@ -473,6 +475,7 @@ className="px-3 py-3 w-[140px] rounded border border-gray-700 bg-gray-900 hover:
       >
         PDF öffnen
       </button>
+)}
 
 
 {role === "office" && n.status === "draft" && (
