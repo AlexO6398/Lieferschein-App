@@ -70,10 +70,19 @@ export async function GET(req: NextRequest) {
         .eq("delivery_note_id", n.id),
     ]);
 
-    const pdfBytes = await buildDeliveryNotePdf({
-      noteNumber: String(n.note_number ?? "XXX"),
-      noteDate: n.note_date,
-      customer: n.customers ?? null,
+customer: (() => {
+  const c = Array.isArray(n.customers) ? n.customers[0] : n.customers;
+  return c
+    ? {
+        name: c.name ?? null,
+        street: c.street ?? null,
+        zip: c.zip ?? null,
+        city: c.city ?? null,
+        email: c.email ?? null,
+      }
+    : null;
+})(),
+
       workers: (workers ?? []).map((w: any) => ({
         name: w.workers?.name ?? "",
         hours: w.hours ?? null,
