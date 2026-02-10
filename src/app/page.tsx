@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type DeliveryNote = {
@@ -27,6 +28,7 @@ const [notes, setNotes] = useState<DeliveryNote[]>([]);
   const [filter, setFilter] = useState<"all" | "draft" | "final">("all");
   const [search, setSearch] = useState("");
 
+  const router = useRouter();
 
 
   const load = async () => {
@@ -34,9 +36,11 @@ const [notes, setNotes] = useState<DeliveryNote[]>([]);
 
     const { data: sess } = await supabase.auth.getSession();
     if (!sess.session) {
-      window.location.href = "/login";
+      const next = encodeURIComponent(window.location.pathname);
+      router.replace(`/login?next=${next}`);
       return;
     }
+
 
 const { data: roleData, error: roleError } = await supabase
   .from("user_roles")
@@ -110,11 +114,15 @@ const { data, error } = await supabase
     }
 
     localStorage.setItem("deliveryNoteId", data.id);
-    window.location.href = "/lieferschein/kunde";
+    router.push("/lieferschein/kunde");
+router.refresh();
+
   };
 
   const continueDraft = () => {
-    window.location.href = "/lieferschein/kunde";
+    router.push("/lieferschein/kunde");
+router.refresh();
+
   };
 
   const openNote = (id: string, status: string) => {
@@ -123,7 +131,9 @@ const { data, error } = await supabase
 
     // Bei draft gehen wir in den Wizard rein
     if (status === "draft") {
-      window.location.href = "/lieferschein/kunde";
+      router.push("/lieferschein/kunde");
+router.refresh();
+
       return;
     }
 
@@ -262,9 +272,9 @@ const filteredNotes = notes.filter((n) => {
 
 
   return (
-    <main className="min-h-screen p-6 bg-gray-100">
+    <main className="min-h-screen p-6 bg-gray-900 text-gray-100">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded shadow p-6">
+        <div className="bg-gray-800/80 border border-gray-700 rounded-xl shadow-lg p-6">
 <div className="flex items-start justify-between gap-4">
   <div className="flex items-center gap-3">
     <img
@@ -275,18 +285,18 @@ const filteredNotes = notes.filter((n) => {
     />
     <div>
       <h1 className="text-2xl font-bold">Lieferschein</h1>
-      <p className="text-sm text-gray-500">Digitale Lieferscheine · {role}</p>
+      <p className="text-sm text-gray-300/80">Digitale Lieferscheine · {role}</p>
     </div>
   </div>
 
-  <span className="text-xs text-gray-400">
+  <span className="text-xs text-gray-300/60">
     v0.1 Demo
   </span>
 </div>
 
 
 
-          <p className="mt-2 text-gray-700">
+          <p className="mt-2 text-gray-300">
             Starte einen neuen Lieferschein oder öffne einen bestehenden.
           </p>
 
@@ -301,7 +311,7 @@ const filteredNotes = notes.filter((n) => {
             {hasDraft && (
               <button
                 onClick={continueDraft}
-                className="w-full bg-gray-700 text-white py-3 rounded"
+                className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded"
               >
                 Mit aktuellem Entwurf weitermachen
               </button>
@@ -309,7 +319,7 @@ const filteredNotes = notes.filter((n) => {
           </div>
         </div>
 
-        <div className="mt-6 bg-white rounded shadow p-6">
+        <div className="mt-6 bg-gray-800/80 border border-gray-700 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
 <h2 className="text-xl font-semibold">
   {role === "office" ? "Letzte Lieferscheine" : "Meine Lieferscheine"}
@@ -323,7 +333,7 @@ const filteredNotes = notes.filter((n) => {
     value={search}
     onChange={(e) => setSearch(e.target.value)}
     placeholder="Suchen (Kunde, Nummer, E-Mail)…"
-    className="w-full sm:w-80 border rounded px-3 py-3 text-sm"
+    className="w-full sm:w-80 rounded px-3 py-3 text-sm bg-gray-900 border border-gray-700 text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
   />
 
   <div className="flex gap-2">
@@ -333,7 +343,10 @@ const filteredNotes = notes.filter((n) => {
         onClick={() => setFilter(k)}
         className={[
           "px-3 py-3 rounded text-sm border",
-          filter === k ? "bg-black text-white border-black" : "bg-white",
+          filter === k
+  ? "bg-gray-100 text-gray-900 border-gray-100"
+  : "bg-gray-900 text-gray-100 border-gray-700 hover:bg-gray-850",
+
         ].join(" ")}
       >
         {k === "all" ? "Alle" : k === "draft" ? "Entwurf" : "Abgeschlossen"}
@@ -351,7 +364,7 @@ const filteredNotes = notes.filter((n) => {
       });
       window.location.href = `/api/export-pdfs?${params.toString()}`;
     }}
-    className="text-sm px-3 py-3 rounded border"
+    className="text-sm px-3 py-3 rounded border border-gray-700 bg-gray-900 hover:bg-gray-800"
   >
     PDFs herunterladen (ZIP)
   </button>
@@ -369,7 +382,7 @@ const filteredNotes = notes.filter((n) => {
           )}
 
           {filteredNotes.length === 0 ? (
-            <p className="mt-4 text-gray-600">Noch keine Einträge.</p>
+            <p className="mt-4 text-gray-300/80">Noch keine Einträge.</p>
           ) : (
             <div className="mt-4 overflow-x-auto">
 
@@ -382,7 +395,7 @@ const filteredNotes = notes.filter((n) => {
 
 
 <thead>
-  <tr className="text-left border-b">
+  <tr className="text-left border-b border-gray-700 text-gray-200">
     <th className="py-3 w-[90px]">Nummer</th>
     <th className="py-3 w-[110px]">Datum</th>
     <th className="py-3 w-[220px]">Kunde</th>
@@ -397,8 +410,8 @@ const filteredNotes = notes.filter((n) => {
   <tr
     key={n.id}
     className={[
-      "border-b align-top hover:bg-gray-50",
-      i % 2 === 1 ? "bg-gray-50/50" : "bg-white",
+      "border-b border-gray-700 align-top hover:bg-gray-700/40",
+i % 2 === 1 ? "bg-gray-800/40" : "bg-transparent",
     ].join(" ")}
   >
 
@@ -455,7 +468,7 @@ className="px-3 py-3 w-[140px] rounded bg-black text-white"
 
       <button
         onClick={() => openPdf(n.id)}
-className="px-3 py-3 w-[140px] rounded border border-gray-300 bg-white"
+className="px-3 py-3 w-[140px] rounded border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-100"
 
       >
         PDF öffnen
