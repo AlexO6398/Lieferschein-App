@@ -396,12 +396,12 @@ const filteredNotes = notes.filter((n) => {
 
 <thead>
   <tr className="text-left border-b border-gray-700 text-gray-200">
-    <th className="py-3 w-[90px]">Nummer</th>
-    <th className="py-3 w-[110px]">Datum</th>
-    <th className="py-3 w-[180px]">Kunde</th>
-    {role === "office" && <th className="py-3 w-[220px]">Erstellt von</th>}
-    <th className="py-3 w-[120px]">Status</th>
-    <th className="py-3 w-[160px] text-right">Aktionen</th>
+    <th className="py-3 w-[110px]">Nummer</th>
+    <th className="py-3 w-[80px]">Datum</th>
+    <th className="py-3 w-[150px]">Kunde</th>
+    {role === "office" && <th className="py-3 w-[150px]">Erstellt von</th>}
+    <th className="py-3 w-[100px]">Status</th>
+    <th className="py-3 w-[140px] text-right">Aktionen</th>
   </tr>
 </thead>
 
