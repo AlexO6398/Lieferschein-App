@@ -103,10 +103,10 @@ export async function buildDeliveryNotePdf(args: BuildPdfArgs) {
       });
     }
 
-    text(page, "GUGG'S Gartenbau", margin + 140, yTop, 12, true);
-    text(page, "Dorf 43", margin + 140, yTop - 14, 10);
-    text(page, "6252 Breitenbach am Inn", margin + 140, yTop - 26, 10);
-    text(page, "hardy.guggenberger6@gmail.com", margin + 140, yTop - 38, 10);
+    text(page, "GUGG'S Gartenbau", margin + 120, yTop, 12, true);
+    text(page, "Dorf 43 | 6252 Breitenbach am Inn", margin + 120, yTop - 14, 10);
+    text(page, "+43 664 9146769", margin + 120, yTop - 26, 10);
+    text(page, "hardy.guggenberger6@gmail.com", margin + 120, yTop - 38, 10);
 
     text(page, `Nr.: ${args.noteNumber}`, 400, yTop, 11, true);
     text(page, `Datum: ${formatDateAT(args.noteDate)}`, 400, yTop - 14, 10);
@@ -531,10 +531,10 @@ export async function buildOfferPdf(args: BuildOfferArgs) {
       });
     }
 
-    text(page, "GUGG'S Gartenbau", margin + 140, yTop, 12, true);
-    text(page, "Dorf 43", margin + 140, yTop - 14, 10);
-    text(page, "6252 Breitenbach am Inn", margin + 140, yTop - 26, 10);
-    text(page, "hardy.guggenberger6@gmail.com", margin + 140, yTop - 38, 10);
+    text(page, "GUGG'S Gartenbau", margin + 120, yTop, 12, true);
+    text(page, "Dorf 43 | 6252 Breitenbach am Inn", margin + 120, yTop - 14, 10);
+    text(page, "+43 664 9146769", margin + 120, yTop - 26, 10);
+    text(page, "hardy.guggenberger6@gmail.com", margin + 120, yTop - 38, 10);
 
     text(page, `Angebot: ${args.offerNumber}`, 340, yTop, 11, true);
     text(page, `Datum: ${formatDateAT(args.offerDate)}`, 340, yTop - 14, 10);
