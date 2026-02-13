@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+
 
 type TabKey = "workers" | "machines" | "materials" | "customers";
 
@@ -27,6 +29,7 @@ export default function StammdatenPage() {
 
   const [tab, setTab] = useState<TabKey>("workers");
   const [showArchived, setShowArchived] = useState(false);
+const router = useRouter();
 
   const [rows, setRows] = useState<Array<BaseRow | CustomerRow>>([]);
   const [error, setError] = useState<string | null>(null);
@@ -69,12 +72,11 @@ setRole(roleValue);
 
 if (roleValue !== "office") {
   router.replace("/");
-  setLoading(false); // optional, aber verhindert "ewiges Laden" falls Redirect hängt
+  ;
   return;
 }
 
-setLoading(false);
-
+setLoading(false)
     };
 
     run();
