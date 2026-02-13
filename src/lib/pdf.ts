@@ -103,10 +103,10 @@ export async function buildDeliveryNotePdf(args: BuildPdfArgs) {
       });
     }
 
-    text(page, "GUGGS Gartenbau GmbH", margin + 140, yTop, 12, true);
-    text(page, "Musterstraße 1", margin + 140, yTop - 14, 10);
-    text(page, "6300 Musterstadt", margin + 140, yTop - 26, 10);
-    text(page, "office@guggs.at", margin + 140, yTop - 38, 10);
+    text(page, "GUGG'S Gartenbau", margin + 140, yTop, 12, true);
+    text(page, "Dorf 43", margin + 140, yTop - 14, 10);
+    text(page, "6252 Breitenbach am Inn", margin + 140, yTop - 26, 10);
+    text(page, "hardy.guggenberger6@gmail.com", margin + 140, yTop - 38, 10);
 
     text(page, `Nr.: ${args.noteNumber}`, 400, yTop, 11, true);
     text(page, `Datum: ${formatDateAT(args.noteDate)}`, 400, yTop - 14, 10);
@@ -122,7 +122,7 @@ export async function buildDeliveryNotePdf(args: BuildPdfArgs) {
       end: { x: PAGE_W - margin, y: 40 },
       thickness: 0.5,
     });
-    text(page, "GUGGS Gartenbau GmbH · UID ATUXXXXXXX", margin, 28, 9);
+    text(page, "GUGG'S Gartenbau · UID ATU77781937", margin, 28, 9);
   };
 
   const page1 = pdfDoc.addPage([PAGE_W, PAGE_H]);
@@ -511,7 +511,7 @@ export async function buildOfferPdf(args: BuildOfferArgs) {
       end: { x: PAGE_W - margin, y: 40 },
       thickness: 0.5,
     });
-    text(page, "GUGGS Gartenbau GmbH · UID ATUXXXXXXX", margin, 28, 9);
+    text(page, "GUGG'S Gartenbau · UID ATU77781937", margin, 28, 9);
   };
 
   const drawHeader = (page: any, yTop: number) => {
@@ -531,10 +531,10 @@ export async function buildOfferPdf(args: BuildOfferArgs) {
       });
     }
 
-    text(page, "GUGGS Gartenbau GmbH", margin + 140, yTop, 12, true);
-    text(page, "Musterstraße 1", margin + 140, yTop - 14, 10);
-    text(page, "6300 Musterstadt", margin + 140, yTop - 26, 10);
-    text(page, "office@guggs.at", margin + 140, yTop - 38, 10);
+    text(page, "GUGG'S Gartenbau", margin + 140, yTop, 12, true);
+    text(page, "Dorf 43", margin + 140, yTop - 14, 10);
+    text(page, "6252 Breitenbach am Inn", margin + 140, yTop - 26, 10);
+    text(page, "hardy.guggenberger6@gmail.com", margin + 140, yTop - 38, 10);
 
     text(page, `Angebot: ${args.offerNumber}`, 340, yTop, 11, true);
     text(page, `Datum: ${formatDateAT(args.offerDate)}`, 340, yTop - 14, 10);
