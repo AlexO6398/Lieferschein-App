@@ -37,6 +37,7 @@ export default function KundePage() {
     const { data, error } = await supabase
       .from("customers")
       .select("id,name,street,zip,city,email")
+      .eq("is_archived", false)
       .order("name", { ascending: true });
 
     if (error) {
@@ -161,8 +162,11 @@ export default function KundePage() {
               <option value="">— bitte auswählen —</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+  		{c.name}
+  		{c.street ? `, ${c.street}` : ""}
+  		{(c.zip || c.city) ? `, ${(c.zip ?? "").trim()} ${(c.city ?? "").trim()}`.trim() : ""}
+		</option>
+
               ))}
             </select>
           )}

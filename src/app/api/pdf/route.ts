@@ -16,21 +16,18 @@ export async function POST(req: Request) {
     // Lieferschein + Kunde laden
     const { data: note, error: noteError } = await supabase
       .from("delivery_notes")
-      .select(
-        `
-        id,
-        note_number,
-        note_date,
-        signature,
-        customers (
-          name,
-          street,
-          zip,
-          city,
-          email
-        )
-      `
-      )
+.select(`
+  id,
+  note_number,
+  note_date,
+  signature,
+  activities_text,
+  photo_1,
+  photo_2,
+  photo_3,
+  photo_4,
+  customers ( name, street, zip, city, email )
+`)
       .eq("id", deliveryNoteId)
       .single();
 
@@ -79,7 +76,15 @@ export async function POST(req: Request) {
           }
         : null,
 
-      signatureDataUrl: (note as any).signature ?? null,
+  signatureDataUrl: (note as any).signature ?? null,
+  photos: [
+    (note as any).photo_1,
+    (note as any).photo_2,
+    (note as any).photo_3,
+    (note as any).photo_4,
+  ].filter(Boolean),
+  activitiesText: (note as any).activities_text ?? null,
+
 
       workers: (workers ?? []).map((w: any) => ({
         name: w.workers?.name ?? "",

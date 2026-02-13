@@ -51,6 +51,7 @@ export default function MitarbeiterPage() {
     const { data, error } = await supabase
       .from("workers")
       .select("id,name,role")
+      .eq("is_archived", false)
       .order("name");
 
     if (error) setError(error.message);
@@ -241,7 +242,7 @@ export default function MitarbeiterPage() {
         <WizardButtons
           canGoNext={true}
           onBack={() => (window.location.href = "/lieferschein/kunde")}
-          onNext={() => (window.location.href = "/lieferschein/geraete")}
+          onNext={() => (window.location.href = "/lieferschein/taetigkeiten")}
         />
       </div>
     </main>

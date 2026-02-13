@@ -50,9 +50,11 @@ export default function GeraetePage() {
 
   const loadMachines = async () => {
     const { data, error } = await supabase
-      .from("machines")
-      .select("id,name")
-      .order("name");
+  .from("machines")
+  .select("id,name")
+  .eq("is_archived", false)
+  .order("name");
+
 
     if (error) setError(error.message);
     else setMachines((data ?? []) as Machine[]);
@@ -245,7 +247,7 @@ export default function GeraetePage() {
 
         <WizardButtons
           canGoNext={true}
-          onBack={() => (window.location.href = "/lieferschein/mitarbeiter")}
+          onBack={() => (window.location.href = "/lieferschein/taetigkeiten")}
           onNext={() => (window.location.href = "/lieferschein/material")}
         />
       </div>

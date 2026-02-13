@@ -52,6 +52,7 @@ export default function MaterialPage() {
     const { data, error } = await supabase
       .from("materials")
       .select("id,name")
+      .eq("is_archived", false)
       .order("name");
 
     if (error) setError(error.message);

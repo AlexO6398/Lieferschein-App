@@ -1,15 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type StepKey = "kunde" | "mitarbeiter" | "geraete" | "material" | "zusammenfassung";
+type StepKey =
+  | "kunde"
+  | "mitarbeiter"
+  | "taetigkeiten"
+  | "geraete"
+  | "material"
+  | "zusammenfassung";
+
 
 const steps: { key: StepKey; label: string; href: string }[] = [
   { key: "kunde", label: "1. Kunde", href: "/lieferschein/kunde" },
   { key: "mitarbeiter", label: "2. Mitarbeiter", href: "/lieferschein/mitarbeiter" },
-  { key: "geraete", label: "3. Geräte", href: "/lieferschein/geraete" },
-  { key: "material", label: "4. Material", href: "/lieferschein/material" },
-  { key: "zusammenfassung", label: "5. Zusammenfassung", href: "/lieferschein/zusammenfassung" },
+  { key: "taetigkeiten", label: "3. Tätigkeiten", href: "/lieferschein/taetigkeiten" },
+  { key: "geraete", label: "4. Geräte", href: "/lieferschein/geraete" },
+  { key: "material", label: "5. Material", href: "/lieferschein/material" },
+  { key: "zusammenfassung", label: "6. Zusammenfassung", href: "/lieferschein/zusammenfassung" },
 ];
+
 
 export function WizardSteps({ currentKey }: { currentKey: StepKey }) {
   const [mounted, setMounted] = useState(false);
@@ -78,7 +87,7 @@ export function WizardSteps({ currentKey }: { currentKey: StepKey }) {
 
       <button
         type="button"
-        onClick={() => (window.location.href = "/")}
+        onClick={() => (window.location.href = "/lieferschein")}
         className="px-3 py-2 rounded border text-sm bg-gray-900 text-gray-100 border-gray-700 hover:bg-gray-800 transition-colors"
       >
         Zur Übersicht
