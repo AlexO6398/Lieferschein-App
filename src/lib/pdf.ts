@@ -125,216 +125,378 @@ export async function buildDeliveryNotePdf(args: BuildPdfArgs) {
     text(page, "GUGG'S Gartenbau · UID ATU77781937", margin, 28, 9);
   };
 
-  const page1 = pdfDoc.addPage([PAGE_W, PAGE_H]);
-  let y = drawHeader(page1, 800);
+const SIG_BOX_W = 300;
+const SIG_BOX_H = 110;
 
-  text(page1, "Kunde", margin, y, 12, true);
+
+// Auf Seiten, wo am Ende Signatur kommt, darf Content NICHT unter diese Y-Grenze:
+
+const FOOTER_BOTTOM_LIMIT = 70; // normaler Footer-Limit
+
+// ------------------------------
+// Pagination / Layout helpers
+// ------------------------------
+const BOTTOM_LIMIT = 70;           
+const TABLE_GAP_AFTER = 18;
+const SECTION_TITLE_GAP = 20;
+const minRowsOnNewPage = 2;
+
+let page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+let y = drawHeader(page, 800);
+
+const newPage = () => {
+  drawFooter(page);
+  page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+  y = drawHeader(page, 800);
+};
+
+const ensureSpace = (need: number, bottomLimit = FOOTER_BOTTOM_LIMIT) => {
+  if (y - need < bottomLimit) newPage();
+};
+
+const drawHrAtCursor = () => {
+  hr(page, y);
+};
+
+const wrapTextLines = (input: string, maxWidth: number, fontSize: number) => {
+  const wrapLine = (line: string) => {
+    const words = line.split(/\s+/).filter(Boolean);
+    const out: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      const width = font.widthOfTextAtSize(next, fontSize);
+      if (width <= maxWidth) cur = next;
+      else {
+        if (cur) out.push(cur);
+        cur = w;
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  };
+
+  return input
+    .split("\n")
+    .flatMap((l) => (l.trim() ? wrapLine(l.trim()) : [""]));
+};
+
+// ------------------------------
+// Customer block
+// ------------------------------
+text(page, "Kunde", margin, y, 12, true);
+y -= 14;
+
+const c = args.customer;
+const customerLines = [
+  c?.name ?? "",
+  c?.street ?? "",
+  `${c?.zip ?? ""} ${c?.city ?? ""}`.trim(),
+  c?.email ?? "",
+].filter(Boolean);
+
+ensureSpace(customerLines.length * 14 + 40);
+
+customerLines.forEach((l) => {
+  text(page, l, margin, y, 11);
   y -= 14;
+});
 
-  const c = args.customer;
-  const customerLines = [
-    c?.name ?? "",
-    c?.street ?? "",
-    `${c?.zip ?? ""} ${c?.city ?? ""}`.trim(),
-    c?.email ?? "",
-  ].filter(Boolean);
+y -= 8;
+drawHrAtCursor();
+y -= 18;
 
-  customerLines.forEach((l) => {
-    text(page1, l, margin, y, 11);
-    y -= 14;
-  });
+// ------------------------------
+// Table drawing with pagination + clean grid
+// ------------------------------
+type TableCol = { label: string; width: number; align?: "left" | "right" };
 
-  y -= 8;
-  hr(page1, y);
-  y -= 18;
+const drawTablePaginated = (
+  title: string,
+  cols: TableCol[],
+  rows: string[][],
+  opts?: { rowH?: number; headerH?: number; minRows?: number; bottomLimit?: number }
+) => {
+  const rowH = opts?.rowH ?? 18;
+  const headerH = opts?.headerH ?? 18;
+  const minRows = opts?.minRows ?? minRowsOnNewPage;
+  const bottomLimit = opts?.bottomLimit ?? FOOTER_BOTTOM_LIMIT;
 
-  const drawTable = (
-    title: string,
-    headers: string[],
-    rows: string[][],
-    colWidths: number[]
-  ) => {
-    text(page1, title, margin, y, 12, true);
-    y -= 20;
+  const startX = margin;
+  const tableW = cols.reduce((a, c) => a + c.width, 0);
 
-    const startX = margin;
-    const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+  let lastRowLineY = 0;
 
-    const headerH = 18;
-    const rowH = 18;
+  // x-Positionen der Spaltenkanten (für vertikale Linien)
+  const xPos: number[] = [startX];
+  for (const c of cols) xPos.push(xPos[xPos.length - 1] + c.width);
 
-    page1.drawLine({
-      start: { x: startX, y: y + headerH - 4 },
-      end: { x: startX + tableWidth, y: y + headerH - 4 },
-      thickness: 1,
+  // Tabelle nicht starten, wenn header + minRows nicht passt
+  ensureSpace(SECTION_TITLE_GAP + headerH + minRows * rowH, bottomLimit);
+
+  text(page, title, margin, y, 12, true);
+  y -= SECTION_TITLE_GAP;
+
+  // Segment-Tracking (pro Seite)
+  let segmentTopY = 0;     // oberer Rand des Tabellenblocks auf dieser Seite
+  let segmentBottomY = 0;  // unterer Rand (nach letzter Row)
+
+const drawVerticalsForSegment = () => {
+  for (let i = 0; i < xPos.length; i++) {
+    page.drawLine({
+      start: { x: xPos[i], y: segmentTopY },
+      end: { x: xPos[i], y: segmentBottomY },
+      thickness: 1, // einheitliche dicke
+      color: rgb(0, 0, 0),
     });
+  }
+};
 
-    page1.drawRectangle({
+  const drawHeader = () => {
+    ensureSpace(headerH + rowH, bottomLimit);
+
+    // segmentTopY = oberste Header-Linie
+    segmentTopY = y + headerH - 4;
+
+    // Header background
+    page.drawRectangle({
       x: startX,
       y: y - 4,
-      width: tableWidth,
+      width: tableW,
       height: headerH,
       color: rgb(0.95, 0.95, 0.95),
     });
 
-    let x = startX;
-    headers.forEach((h, i) => {
-      text(page1, h, x + 6, y + 2, 10, true);
-      x += colWidths[i];
-    });
-
-    page1.drawLine({
-      start: { x: startX, y: y - 6 },
-      end: { x: startX + tableWidth, y: y - 6 },
+    // Top border
+    page.drawLine({
+      start: { x: startX, y: y + headerH - 4 },
+      end: { x: startX + tableW, y: y + headerH - 4 },
       thickness: 1,
+      color: rgb(0, 0, 0),
     });
 
-    const topY = y + headerH - 6;
+    // Header bottom border
+    page.drawLine({
+      start: { x: startX, y: y - 4 },
+      end: { x: startX + tableW, y: y - 4 },
+      thickness: 1,
+      color: rgb(0, 0, 0),
+    });
+
+    // Header texts
+    let x = startX;
+    cols.forEach((c) => {
+      text(page, c.label, x + 6, y + 2, 10, true);
+      x += c.width;
+    });
+
+// Vertikale Linien im Header
+const topY = y + headerH - 4;
+const bottomY = y - 6;
+for (let i = 0; i < xPos.length; i++) {
+  page.drawLine({
+    start: { x: xPos[i], y: topY },
+    end: { x: xPos[i], y: bottomY },
+    thickness: 1,
+    color: rgb(0, 0, 0),
+  });
+}
+
     y -= headerH;
-
-    rows.forEach((r, rowIdx) => {
-      if (rowIdx % 2 === 0) {
-        page1.drawRectangle({
-          x: startX,
-          y: y - 4,
-          width: tableWidth,
-          height: rowH,
-          color: rgb(0.985, 0.985, 0.985),
-        });
-      }
-
-      let rx = startX;
-      r.forEach((cell, i) => {
-        text(page1, String(cell ?? ""), rx + 6, y + 2, 10);
-        rx += colWidths[i];
-      });
-
-      page1.drawLine({
-        start: { x: startX, y: y - 6 },
-        end: { x: startX + tableWidth, y: y - 6 },
-        thickness: 0.5,
-      });
-
-      y -= rowH;
-    });
-
-    let vx = startX;
-    const bottomY = y + rowH - 6;
-    for (let i = 0; i < colWidths.length + 1; i++) {
-      page1.drawLine({
-        start: { x: vx, y: topY + 2 },
-        end: { x: vx, y: bottomY },
-        thickness: 0.5,
-      });
-      vx += colWidths[i] ?? 0;
-    }
-
-    y -= 18;
   };
 
-  if (args.workers.length > 0) {
-    drawTable(
-      "Mitarbeiter",
-      ["Name", "Stunden"],
-      args.workers.map((w) => [w.name ?? "", `${w.hours ?? ""}`]),
-      [380, 115]
-    );
-  }
+  const drawRow = (r: string[], rowIdx: number) => {
+    // Zeile passt nicht mehr -> Segment vertikals fertigzeichnen, neue Seite, Header neu
+	
+	
+    if (y - rowH < bottomLimit) {
+      // segmentBottomY = letzte Linie der letzten Row auf dieser Seite
+      segmentBottomY = lastRowLineY;; // da wir Linien bei y-6 ziehen
+      drawVerticalsForSegment();
 
-  if (args.machines.length > 0) {
-    drawTable(
-      "Geräte",
-      ["Bezeichnung", "Menge", "Einheit"],
-      args.machines.map((m) => [
-        m.name ?? "",
-        `${m.qty ?? ""}`,
-        `${m.unit ?? ""}`,
-      ]),
-      [300, 95, 100]
-    );
-  }
+      newPage();
+      ensureSpace(headerH + minRows * rowH, bottomLimit);
+      drawHeader();
+    }
 
-  if (args.materials.length > 0) {
-    drawTable(
-      "Material",
-      ["Bezeichnung", "Menge", "Einheit"],
-      args.materials.map((m) => [
-        m.name ?? "",
-        `${m.qty ?? ""}`,
-        `${m.unit ?? ""}`,
-      ]),
-      [300, 95, 100]
-    );
-  }
+    // Zebra optional
+    if (rowIdx % 2 === 0) {
+      page.drawRectangle({
+        x: startX,
+        y: y - 4.5,
+        width: tableW,
+        height: rowH,
+        color: rgb(0.985, 0.985, 0.985),
+      });
+    }
 
-  const activities = (args.activitiesText ?? "").trim();
-  if (activities) {
-    text(page1, "Tätigkeiten", margin, y, 12, true);
-    y -= 16;
-
-    const maxWidth = PAGE_W - margin * 2;
-    const fontSize = 10;
-    const lineHeight = 13;
-
-    const wrapLine = (line: string) => {
-      const words = line.split(/\s+/).filter(Boolean);
-      const out: string[] = [];
-      let cur = "";
-      for (const w of words) {
-        const next = cur ? `${cur} ${w}` : w;
-        const width = font.widthOfTextAtSize(next, fontSize);
-        if (width <= maxWidth) cur = next;
-        else {
-          if (cur) out.push(cur);
-          cur = w;
-        }
+    // Cells
+    let x = startX;
+    r.forEach((cell, i) => {
+      const col = cols[i];
+      const s = String(cell ?? "");
+      if (col?.align === "right") {
+        const w = font.widthOfTextAtSize(s, 10);
+        text(page, s, x + col.width - 6 - w, y + 2, 10);
+      } else {
+        text(page, s, x + 6, y + 2, 10);
       }
-      if (cur) out.push(cur);
-      return out;
-    };
-
-    const lines = activities
-      .split("\n")
-      .flatMap((l) => (l.trim() ? wrapLine(l.trim()) : [""]))
-      .slice(0, 12);
-
-    lines.forEach((l) => {
-      text(page1, l, margin, y, fontSize);
-      y -= lineHeight;
+      x += cols[i].width;
     });
 
-    y -= 8;
-    hr(page1, y);
-    y -= 18;
-  }
+    // Bottom line (zwischen jeder Zeile)
+page.drawLine({
+  start: { x: startX, y: y - 4 },
+  end: { x: startX + tableW, y: y - 4 },
+  thickness: 1,
+  color: rgb(0, 0, 0),
+});
 
-  const sigBoxY = 80;
-  text(page1, "Unterschrift Kunde", margin, sigBoxY + 120, 11, true);
-  box(page1, margin, sigBoxY, 300, 110);
+
+
+lastRowLineY = y - 4;   // ✅ HIER setzen (nach dem Zeichnen!)
+y -= rowH;
+  };
+
+
+
+  // Start
+  drawHeader();
+  rows.forEach((r, idx) => drawRow(r, idx));
+
+segmentBottomY = lastRowLineY || (y - 6); // ✅ fallback
+drawVerticalsForSegment();
+
+  y -= TABLE_GAP_AFTER;
+};
+
+// ------------------------------
+// Draw tables (now paginated)
+// ------------------------------
+if (args.workers.length > 0) {
+  drawTablePaginated(
+    "Mitarbeiter",
+    [
+      { label: "Name", width: 380, align: "left" },
+      { label: "Stunden", width: 115, align: "right" },
+    ],
+    args.workers.map((w) => [w.name ?? "", `${w.hours ?? ""}`])
+  );
+}
+
+if (args.machines.length > 0) {
+  drawTablePaginated(
+    "Geräte",
+    [
+      { label: "Bezeichnung", width: 300 },
+      { label: "Menge", width: 95, align: "right" },
+      { label: "Einheit", width: 100 },
+    ],
+    args.machines.map((m) => [m.name ?? "", `${m.qty ?? ""}`, `${m.unit ?? ""}`])
+  );
+}
+
+if (args.materials.length > 0) {
+  drawTablePaginated(
+    "Material",
+    [
+      { label: "Bezeichnung", width: 300 },
+      { label: "Menge", width: 95, align: "right" },
+      { label: "Einheit", width: 100 },
+    ],
+    args.materials.map((m) => [m.name ?? "", `${m.qty ?? ""}`, `${m.unit ?? ""}`])
+  );
+}
+
+// ------------------------------
+// Activities + Signature as keep-together block (no overlap)
+// ------------------------------
+
+
+const drawSignatureHereOrNewPage = async () => {
+  // benötigte Höhe für Signaturblock
+  const titleH = 16;
+  const boxTopGap = 14;
+  const afterBoxGap = 20;
+
+  const need = titleH + boxTopGap + SIG_BOX_H + afterBoxGap;
+
+  // wenn nicht genug Platz -> neue Seite
+  ensureSpace(need, FOOTER_BOTTOM_LIMIT);
+
+  const topY = y;
+
+  text(page, "Unterschrift Kunde", margin, topY, 12, true);
+
+  const boxY = topY - boxTopGap - SIG_BOX_H;
+  box(page, margin, boxY, SIG_BOX_W, SIG_BOX_H);
 
   if (args.signatureDataUrl) {
     const base64 = args.signatureDataUrl.split(",")[1];
     const img = Buffer.from(base64, "base64");
     const png = await pdfDoc.embedPng(img);
 
-    const boxW = 300,
-      boxH = 110,
-      pad = 10;
-    const maxW = boxW - pad * 2;
-    const maxH = boxH - pad * 2;
+    const pad = 10;
+    const maxW = SIG_BOX_W - pad * 2;
+    const maxH = SIG_BOX_H - pad * 2;
 
-    const pngDims = png.scale(1);
-    const scale = Math.min(maxW / pngDims.width, maxH / pngDims.height);
+    const dims = png.scale(1);
+    const scale = Math.min(maxW / dims.width, maxH / dims.height);
 
-    page1.drawImage(png, {
+    page.drawImage(png, {
       x: margin + pad,
-      y: sigBoxY + pad,
-      width: pngDims.width * scale,
-      height: pngDims.height * scale,
+      y: boxY + pad,
+      width: dims.width * scale,
+      height: dims.height * scale,
     });
   }
 
-  drawFooter(page1);
+  // Cursor unter die Box
+  y = boxY - afterBoxGap;
+};
+
+const drawActivitiesAndSignature = async () => {
+  const activities = (args.activitiesText ?? "").trim();
+  const contentW = PAGE_W - margin * 2;
+
+  // Tätigkeiten auf aktueller Seite so weit wie möglich
+  if (activities) {
+    const fontSize = 10;
+    const lineH = 13;
+    const lines = wrapTextLines(activities, contentW, fontSize).slice(0, 12);
+
+    // Platz für Titel + mind. 2 Zeilen, ansonsten neue Seite
+    ensureSpace(16 + 2 * lineH, FOOTER_BOTTOM_LIMIT);
+
+    text(page, "Tätigkeiten", margin, y, 12, true);
+    y -= 16;
+
+    for (const l of lines) {
+      if (y - lineH < FOOTER_BOTTOM_LIMIT) {
+        newPage();
+        text(page, "Tätigkeiten", margin, y, 12, true);
+        y -= 16;
+      }
+      text(page, l, margin, y, fontSize);
+      y -= lineH;
+    }
+
+    y -= 8;
+    if (y > FOOTER_BOTTOM_LIMIT + 10) {
+      hr(page, y);
+      y -= 18;
+    }
+  }
+
+  // Signatur immer auf eigener Seite oben
+  await drawSignatureHereOrNewPage();
+};
+await drawActivitiesAndSignature();
+drawFooter(page);
+
+// ------------------------------
+// photos block bleibt wie gehabt (dein Code unten kann bleiben)
+// ------------------------------
 
   const photos = (args.photos ?? []).slice(0, 4);
   if (photos.length > 0) {

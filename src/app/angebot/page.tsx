@@ -114,6 +114,33 @@ export default function OfferHomePage() {
     router.push("/angebot/neu"); // später: /angebot/[id] wenn du readonly willst
   };
 
+  const deleteDraftOffer = async (id: string) => {
+  const ok = confirm("Entwurf wirklich löschen?");
+  if (!ok) return;
+
+  const res = await fetch("/api/offer-delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ offerId: id }),
+  });
+
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(j.error ?? "Fehler beim Löschen");
+    return;
+  }
+
+  // falls gerade dieser Draft im localStorage liegt → entfernen
+  if (localStorage.getItem("offerId") === id) {
+    localStorage.removeItem("offerId");
+  }
+
+  // UI aktualisieren
+  setOffers((prev) => prev.filter((o) => o.id !== id));
+};
+
+
+
 const finalizeOffer = async (id: string) => {
   const ok = confirm("Angebot wirklich finalisieren? (Nummer wird vergeben)");
   if (!ok) return;
@@ -444,6 +471,15 @@ if (!res.ok) {
     className="px-3 py-3 w-[140px] rounded border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-100"
   >
     PDF öffnen
+  </button>
+)}
+
+{o.status === "draft" && (
+  <button
+    onClick={() => deleteDraftOffer(o.id)}
+    className="px-3 py-3 w-[140px] rounded border border-red-300 text-red-700 bg-white hover:bg-red-50"
+  >
+    Löschen
   </button>
 )}
 

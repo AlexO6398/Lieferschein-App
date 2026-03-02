@@ -15,6 +15,10 @@ import Underline from "@tiptap/extension-underline";
 type Customer = {
   id: string;
   name: string;
+  street: string | null;
+  zip: string | null;
+  city: string | null;
+  email: string | null;
 };
 
 type SectionRow = {
@@ -135,12 +139,77 @@ export default function OfferNewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+
+// Formular "neuer Kunde"
+const [name, setName] = useState("");
+const [street, setStreet] = useState("");
+const [zip, setZip] = useState("");
+const [city, setCity] = useState("");
+const [email, setEmail] = useState("");
+const [error, setError] = useState<string | null>(null);
+const [saving, setSaving] = useState(false);
+
+const addCustomer = async () => {
+  setSaving(true);
+  setError(null);
+
+  if (!name.trim()) {
+    setError("Bitte Kundenname eingeben.");
+    setSaving(false);
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("customers")
+    .insert([
+      {
+        name: name.trim(),
+        street: street.trim() || null,
+        zip: zip.trim() || null,
+        city: city.trim() || null,
+        email: email.trim() || null,
+      },
+    ])
+    .select("id,name,street,zip,city,email")
+    .single();
+
+  if (error) {
+    setError(error.message);
+    setSaving(false);
+    return;
+  }
+
+  // Form reset
+  setName("");
+  setStreet("");
+  setZip("");
+  setCity("");
+  setEmail("");
+
+  await loadCustomers();
+
+  const newId = (data as Customer).id;
+  setCustomerId(newId);
+
+  // ✅ Optional: gleich im Offer speichern (damit nix verloren geht)
+  if (offerId) {
+    const { error: upErr } = await supabase
+      .from("offers")
+      .update({ customer_id: newId })
+      .eq("id", offerId);
+    if (upErr) setError(upErr.message);
+  }
+
+  setSaving(false);
+};
+
   const loadCustomers = async () => {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("id,name")
-      .eq("is_archived", false)
-      .order("name");
+  const { data, error } = await supabase
+  .from("customers")
+  .select("id,name,street,zip,city,email")
+  .eq("is_archived", false)
+  .order("name", { ascending: true });
 
     if (error) {
       console.error(error);
@@ -174,6 +243,8 @@ export default function OfferNewPage() {
       setSections([]); // leer wenn nix gespeichert
     }
   };
+
+
 
   /* =========================
      SAVE / FINALIZE
@@ -302,22 +373,104 @@ export default function OfferNewPage() {
           </button>
         </div>
 
-        {/* Kunde */}
-        <div className="mt-6">
-          <label className="block mb-1">Kunde</label>
-          <select
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            className="w-full rounded bg-gray-900 border border-gray-700 p-2"
-          >
-            <option value="">— auswählen —</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+        {/* Fehleranzeige */}
+{error && (
+  <div className="mt-4 p-3 bg-red-900/40 border border-red-700 text-red-200 rounded">
+    {error}
+  </div>
+)}
+
+{/* Kunde */}
+<div className="mt-6">
+  <label className="block mb-1 text-gray-200">Kunde</label>
+
+  <select
+    className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-gray-100"
+    value={customerId}
+    onChange={async (e) => {
+      const id = e.target.value;
+      setCustomerId(id);
+
+      // optional sofort DB updaten (wie beim Lieferschein)
+      if (!offerId || !id) return;
+
+      const { error } = await supabase
+        .from("offers")
+        .update({ customer_id: id })
+        .eq("id", offerId);
+
+      if (error) setError(error.message);
+    }}
+  >
+    <option value="">— auswählen —</option>
+
+    {customers.map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.name}
+        {c.street ? `, ${c.street}` : ""}
+        {(c.zip || c.city)
+          ? `, ${(c.zip ?? "").trim()} ${(c.city ?? "").trim()}`.trim()
+          : ""}
+      </option>
+    ))}
+  </select>
+
+  <button
+    type="button"
+    onClick={() => setShowNewCustomer((v) => !v)}
+    className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-200"
+  >
+    {showNewCustomer ? "▼" : "▶"} Neuen Kunden anlegen
+  </button>
+
+  {showNewCustomer && (
+    <div className="mt-3 border border-gray-700 rounded p-4 bg-gray-900/60">
+      <div className="grid gap-2">
+        <input
+          className="border border-gray-700 bg-gray-900 p-2 rounded text-gray-100 placeholder:text-gray-400"
+          placeholder="Name *"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className="border border-gray-700 bg-gray-900 p-2 rounded text-gray-100 placeholder:text-gray-400"
+          placeholder="Straße"
+          value={street}
+          onChange={(e) => setStreet(e.target.value)}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            className="border border-gray-700 bg-gray-900 p-2 rounded text-gray-100 placeholder:text-gray-400"
+            placeholder="PLZ"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+          />
+          <input
+            className="border border-gray-700 bg-gray-900 p-2 rounded text-gray-100 placeholder:text-gray-400"
+            placeholder="Ort"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
         </div>
+        <input
+          className="border border-gray-700 bg-gray-900 p-2 rounded text-gray-100 placeholder:text-gray-400"
+          placeholder="E-Mail"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <button
+          type="button"
+          onClick={addCustomer}
+          disabled={saving}
+          className="mt-2 bg-gray-100 text-gray-900 py-2 rounded hover:bg-white disabled:opacity-60"
+        >
+          {saving ? "Speichere…" : "Kunde speichern"}
+        </button>
+      </div>
+    </div>
+  )}
+</div>
 
         {/* Überschrift */}
         <div className="mt-6">
