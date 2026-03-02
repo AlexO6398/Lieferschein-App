@@ -50,6 +50,13 @@ const isWeekend = (d: Date) => {
   return day === 0 || day === 6;
 };
 
+const formatDateAT = (ymd: string) => {
+  // erwartet "YYYY-MM-DD"
+  const [y, m, d] = ymd.split("-");
+  if (!y || !m || !d) return ymd;
+  return `${d}.${m}.${y}`;
+};
+
 const weekdayDe = (d: Date) =>
   new Intl.DateTimeFormat("de-AT", { weekday: "long" }).format(d);
 
@@ -125,7 +132,7 @@ export default function AuswertungPage() {
       const { data, error } = await supabase
         .from("delivery_worker_entries")
         .select("hours,delivery_notes(note_date,status),workers(name)")
-        .eq("delivery_notes.status", "final")
+        .in("delivery_notes.status", ["final", "archive"])
         .gte("delivery_notes.note_date", from)
         .lt("delivery_notes.note_date", toNext)
         .order("created_at", { ascending: true });
@@ -166,7 +173,7 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
   const date = e.delivery_notes?.note_date;
   const status = e.delivery_notes?.status;
 
-  if (!date || status !== "final") continue;
+  if (!date || (status !== "final" && status !== "archive")) continue;
 
   const dateYmd = date.slice(0, 10);
 
@@ -233,16 +240,19 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
     const rows: string[] = [];
     rows.push(["Mitarbeiter", "Summe Stunden", "Datum", "Wochentag", "Stunden"].join(";"));
 
+    const formatHoursAT = (n: number) =>
+  n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     for (const emp of report) {
       // optional: 1 Summary row
-      rows.push([emp.name, emp.totalHours.toFixed(2), "", "", ""].join(";"));
+      rows.push([emp.name, formatHoursAT(emp.totalHours), "", "", ""].join(";"));
       for (const d of emp.days) {
         rows.push([
           emp.name,
-          emp.totalHours.toFixed(2),
-          d.dateYmd,
+          formatHoursAT(emp.totalHours),
+          formatDateAT(d.dateYmd),
           d.weekday,
-          d.hours.toFixed(2),
+          formatHoursAT(d.hours),
         ].join(";"));
       }
     }
@@ -387,7 +397,7 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
                                     idx % 2 === 1 ? "bg-gray-800/40" : "bg-transparent",
                                   ].join(" ")}
                                 >
-                                  <td className="py-2">{d.dateYmd}</td>
+                                  <td className="py-2">{formatDateAT(d.dateYmd)}</td>
                                   <td className="py-2">
                                     {d.weekday}
                                     {d.isWeekend ? (
