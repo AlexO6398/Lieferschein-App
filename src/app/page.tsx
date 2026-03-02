@@ -84,6 +84,13 @@ export default function LandingPage() {
                 >
                   Stammdaten bearbeiten
                 </button>
+
+                <button
+                  onClick={() => router.push("/auswertung")}
+                  className="w-full bg-gray-900 border border-gray-700 text-gray-100 py-3 rounded hover:bg-gray-800"
+                >
+                  Auswertung
+                </button>
               </>
             )}
           </div>
