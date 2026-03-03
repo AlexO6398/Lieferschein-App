@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 type StepKey =
   | "kunde"
+  | "einsatzort"
   | "mitarbeiter"
   | "taetigkeiten"
   | "geraete"
@@ -12,11 +13,12 @@ type StepKey =
 
 const steps: { key: StepKey; label: string; href: string }[] = [
   { key: "kunde", label: "1. Kunde", href: "/lieferschein/kunde" },
-  { key: "mitarbeiter", label: "2. Mitarbeiter", href: "/lieferschein/mitarbeiter" },
-  { key: "taetigkeiten", label: "3. Tätigkeiten", href: "/lieferschein/taetigkeiten" },
-  { key: "geraete", label: "4. Geräte", href: "/lieferschein/geraete" },
-  { key: "material", label: "5. Material", href: "/lieferschein/material" },
-  { key: "zusammenfassung", label: "6. Zusammenfassung", href: "/lieferschein/zusammenfassung" },
+  { key: "einsatzort", label: "2. Einsatzort", href: "/lieferschein/einsatzort" },
+  { key: "mitarbeiter", label: "3. Mitarbeiter", href: "/lieferschein/mitarbeiter" },
+  { key: "taetigkeiten", label: "4. Tätigkeiten", href: "/lieferschein/taetigkeiten" },
+  { key: "geraete", label: "5. Geräte", href: "/lieferschein/geraete" },
+  { key: "material", label: "6. Material", href: "/lieferschein/material" },
+  { key: "zusammenfassung", label: "7. Zusammenfassung", href: "/lieferschein/zusammenfassung" },
 ];
 
 

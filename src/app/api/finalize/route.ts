@@ -26,13 +26,13 @@ const { data: note, error: noteError } = await supabase
   note_date,
   signature,
   customer_id,
-  customers (
-    name,
-    street,
-    zip,
-    city,
-    email
-  )
+  customers:customers!delivery_notes_customer_id_fkey (
+  name,
+  street,
+  zip,
+  city,
+  email
+)
 `)
 
   .eq("id", deliveryNoteId)

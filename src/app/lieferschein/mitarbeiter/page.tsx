@@ -241,7 +241,7 @@ export default function MitarbeiterPage() {
 
         <WizardButtons
           canGoNext={true}
-          onBack={() => (window.location.href = "/lieferschein/kunde")}
+          onBack={() => (window.location.href = "/lieferschein/einsatzort")}
           onNext={() => (window.location.href = "/lieferschein/taetigkeiten")}
         />
       </div>

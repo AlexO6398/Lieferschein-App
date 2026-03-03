@@ -26,7 +26,8 @@ export async function POST(req: Request) {
   photo_2,
   photo_3,
   photo_4,
-  customers ( name, street, zip, city, email )
+  customers:customers!delivery_notes_customer_id_fkey ( name, street, zip, city, email ),
+  site_customer:customers!delivery_notes_site_customer_id_fkey ( name, street, zip, city, email )
 `)
       .eq("id", deliveryNoteId)
       .single();
@@ -41,6 +42,11 @@ export async function POST(req: Request) {
     // customers kann bei Supabase je nach Relation als Array kommen -> normalisieren
     const customerRaw = (note as any).customers;
     const customerObj = Array.isArray(customerRaw) ? customerRaw[0] : customerRaw;
+
+    // site_customer kann ebenfalls als Array kommen -> normalisieren
+    const siteRaw = (note as any).site_customer;
+    const siteObj = Array.isArray(siteRaw) ? siteRaw[0] : siteRaw;
+
 
     // Positionen laden
     const [{ data: workers }, { data: machines }, { data: materials }] = await Promise.all([
@@ -58,9 +64,12 @@ export async function POST(req: Request) {
         .eq("delivery_note_id", deliveryNoteId),
     ]);
 
+
     // Nummer im PDF anzeigen (wenn noch keine da ist -> Hinweistext)
     const noteNumber =
       (note as any).note_number ? String((note as any).note_number) : "wird beim Abschließen vergeben";
+
+
 
     const pdfBytes = await buildDeliveryNotePdf({
       noteNumber,
@@ -75,6 +84,16 @@ export async function POST(req: Request) {
             email: customerObj.email ?? null,
           }
         : null,
+
+        siteCustomer: siteObj
+  ? {
+      name: siteObj.name ?? null,
+      street: siteObj.street ?? null,
+      zip: siteObj.zip ?? null,
+      city: siteObj.city ?? null,
+      email: siteObj.email ?? null,
+    }
+  : null,
 
   signatureDataUrl: (note as any).signature ?? null,
   photos: [

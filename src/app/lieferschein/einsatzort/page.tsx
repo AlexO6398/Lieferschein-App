@@ -13,7 +13,7 @@ type Customer = {
   email: string | null;
 };
 
-export default function KundePage() {
+export default function EinsatzortPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export default function KundePage() {
 
   const [deliveryNoteId, setDeliveryNoteId] = useState<string | null>(null);
 
-  // Formular "neuer Kunde"
+  // Formular "neuer Kunde/Einsatzort"
   const [name, setName] = useState("");
   const [street, setStreet] = useState("");
   const [zip, setZip] = useState("");
@@ -40,11 +40,8 @@ export default function KundePage() {
       .eq("is_archived", false)
       .order("name", { ascending: true });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setCustomers((data as Customer[]) ?? []);
-    }
+    if (error) setError(error.message);
+    else setCustomers((data as Customer[]) ?? []);
 
     setLoading(false);
   };
@@ -53,25 +50,23 @@ export default function KundePage() {
     const init = async () => {
       await loadCustomers();
 
-      const existingId = localStorage.getItem("deliveryNoteId");
-      if (existingId) {
-        setDeliveryNoteId(existingId);
+      const id = localStorage.getItem("deliveryNoteId");
+      if (!id) {
+        setError("Kein aktiver Lieferschein.");
         return;
       }
+      setDeliveryNoteId(id);
 
-      const { data, error } = await supabase
+      // ✅ bereits gespeicherten Einsatzort laden, falls vorhanden
+      const { data: note, error } = await supabase
         .from("delivery_notes")
-        .insert([{ status: "draft" }])
-        .select("id")
+        .select("site_customer_id")
+        .eq("id", id)
         .single();
 
-      if (error) {
-        setError(error.message);
-        return;
+      if (!error && note?.site_customer_id) {
+        setSelectedCustomerId(note.site_customer_id);
       }
-
-      localStorage.setItem("deliveryNoteId", data.id);
-      setDeliveryNoteId(data.id);
     };
 
     init();
@@ -82,7 +77,7 @@ export default function KundePage() {
     setError(null);
 
     if (!name.trim()) {
-      setError("Bitte Kundenname eingeben.");
+      setError("Bitte Einsatzort-Name eingeben.");
       setSaving(false);
       return;
     }
@@ -116,6 +111,16 @@ export default function KundePage() {
     await loadCustomers();
     setSelectedCustomerId((data as Customer).id);
 
+    // ✅ sofort im Lieferschein speichern
+    if (deliveryNoteId) {
+      const { error: upErr } = await supabase
+        .from("delivery_notes")
+        .update({ site_customer_id: (data as Customer).id })
+        .eq("id", deliveryNoteId);
+
+      if (upErr) setError(upErr.message);
+    }
+
     setSaving(false);
   };
 
@@ -124,9 +129,9 @@ export default function KundePage() {
   return (
     <main className="min-h-screen p-6 bg-gray-900 text-gray-100">
       <div className="max-w-xl mx-auto bg-gray-800/80 border border-gray-700 rounded-xl shadow-lg p-6 flex flex-col min-h-[80vh]">
-        <WizardSteps currentKey="kunde" />
+        <WizardSteps currentKey="einsatzort" />
 
-        <h1 className="text-2xl font-bold">Lieferschein – Kunde</h1>
+        <h1 className="text-2xl font-bold">Lieferschein – Einsatzort</h1>
         <p className="text-sm text-gray-300/80 mt-1">Datum: {today}</p>
 
         {error && (
@@ -137,10 +142,11 @@ export default function KundePage() {
 
         <div className="mt-6">
           <label className="block font-medium mb-1 text-gray-200">
-            Bestehenden Kunden auswählen
+            Bestehenden Einsatzort auswählen
           </label>
+
           {loading ? (
-            <p className="text-gray-300">Lade Kunden…</p>
+            <p className="text-gray-300">Lade…</p>
           ) : (
             <select
               className="w-full rounded bg-gray-900 border border-gray-700 p-2 text-gray-100"
@@ -149,24 +155,25 @@ export default function KundePage() {
                 const id = e.target.value;
                 setSelectedCustomerId(id);
 
-                if (!deliveryNoteId || !id) return;
+                if (!deliveryNoteId) return;
 
                 const { error } = await supabase
                   .from("delivery_notes")
-                  .update({ customer_id: id })
+                  .update({ site_customer_id: id || null })
                   .eq("id", deliveryNoteId);
 
                 if (error) setError(error.message);
               }}
             >
-              <option value="">— bitte auswählen —</option>
+              <option value="">— optional auswählen —</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
-  		{c.name}
-  		{c.street ? `, ${c.street}` : ""}
-  		{(c.zip || c.city) ? `, ${(c.zip ?? "").trim()} ${(c.city ?? "").trim()}`.trim() : ""}
-		</option>
-
+                  {c.name}
+                  {c.street ? `, ${c.street}` : ""}
+                  {(c.zip || c.city)
+                    ? `, ${(c.zip ?? "").trim()} ${(c.city ?? "").trim()}`.trim()
+                    : ""}
+                </option>
               ))}
             </select>
           )}
@@ -177,9 +184,9 @@ export default function KundePage() {
         <button
           type="button"
           onClick={() => setShowNewCustomer((v) => !v)}
-          className="mt-6 flex items-center gap-2 text-sm font-medium text-gray-200"
+          className="mt-2 flex items-center gap-2 text-sm font-medium text-gray-200"
         >
-          {showNewCustomer ? "▼" : "▶"} Neuen Kunden anlegen
+          {showNewCustomer ? "▼" : "▶"} Neuen Einsatzort anlegen
         </button>
 
         {showNewCustomer && (
@@ -223,7 +230,7 @@ export default function KundePage() {
                 disabled={saving}
                 className="mt-2 bg-gray-100 text-gray-900 py-2 rounded hover:bg-white disabled:opacity-60"
               >
-                {saving ? "Speichere…" : "Kunde speichern"}
+                {saving ? "Speichere…" : "Einsatzort speichern"}
               </button>
             </div>
           </div>
@@ -231,20 +238,20 @@ export default function KundePage() {
 
         <div className="mt-6 text-sm text-gray-300">
           <p>
-            Ausgewählter Kunde:{" "}
+            Ausgewählter Einsatzort:{" "}
             <strong>
               {selectedCustomerId
-                ? customers.find((c) => c.id === selectedCustomerId)?.name ??
-                  "(unbekannt)"
-                : "—"}
+                ? customers.find((c) => c.id === selectedCustomerId)?.name ?? "(unbekannt)"
+                : "— (optional)"}
             </strong>
           </p>
         </div>
 
         <WizardButtons
-          canGoNext={!!selectedCustomerId}
-          onBack={() => (window.location.href = "/")}
-          onNext={() => (window.location.href = "/lieferschein/einsatzort")}
+          // Einsatzort ist optional -> immer weiter
+          canGoNext={true}
+          onBack={() => (window.location.href = "/lieferschein/kunde")}
+          onNext={() => (window.location.href = "/lieferschein/mitarbeiter")}
         />
       </div>
     </main>

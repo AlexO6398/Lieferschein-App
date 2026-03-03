@@ -66,8 +66,8 @@ setHasDraft(!!localStorage.getItem("deliveryNoteId"));
 let q = supabase
   .from("delivery_notes")
   .select(
-    "id,status,note_date,note_number,owner_id,customers(name),profiles:profiles!delivery_notes_owner_id_fkey(email)"
-  )
+  "id,status,note_date,note_number,owner_id,customers:customers!delivery_notes_customer_id_fkey(name),profiles:profiles!delivery_notes_owner_id_fkey(email)"
+)
   .order("created_at", { ascending: false })
   .limit(20);
 
@@ -213,7 +213,7 @@ const openPdf = async (id: string) => {
   // 1) Metadaten holen (Nummer, Kunde, Datum)
   const { data: meta, error: metaErr } = await supabase
     .from("delivery_notes")
-    .select("note_number,note_date,customers(name)")
+    .select("note_number,note_date,customers:customers!delivery_notes_customer_id_fkey(name)")
     .eq("id", id)
     .single();
 
@@ -224,7 +224,7 @@ const openPdf = async (id: string) => {
 
   const nr = String(meta?.note_number ?? "LS_XXX");
 const customerObj =
-  Array.isArray(meta?.customers) ? meta.customers[0] : meta?.customers;
+  Array.isArray((meta as any)?.customers) ? (meta as any).customers[0] : (meta as any)?.customers;
 
 const kunde = sanitize(String(customerObj?.name ?? "Unbekannt"));
 

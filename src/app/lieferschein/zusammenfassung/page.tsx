@@ -14,7 +14,7 @@ export default function ZusammenfassungPage() {
   const [saving, setSaving] = useState(false);
   const [noteNumber, setNoteNumber] = useState<string | null>(null);
   const [hasSignature, setHasSignature] = useState(false);
-
+  const [siteCustomer, setSiteCustomer] = useState<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -29,14 +29,33 @@ export default function ZusammenfassungPage() {
   }, []);
 
   const loadAll = async (id: string) => {
-    const { data: note } = await supabase
-      .from("delivery_notes")
-      .select("note_number, customer_id, customers(name,street,zip,city,email)")
-      .eq("id", id)
-      .single();
+const { data: note, error: noteErr } = await supabase
+  .from("delivery_notes")
+  .select(`
+    note_number,
+    customer_id,
+    site_customer_id,
+    customers:customers!delivery_notes_customer_id_fkey(name,street,zip,city,email),
+    site_customer:customers!delivery_notes_site_customer_id_fkey(name,street,zip,city,email)
+  `)
+  .eq("id", id)
+  .single();
+
+if (noteErr) {
+  setError(noteErr.message);
+  return;
+}
 
     setNoteNumber(note?.note_number ?? null);
-    setCustomer(note?.customers);
+
+
+const custRaw = (note as any)?.customers;
+const custObj = Array.isArray(custRaw) ? custRaw[0] : custRaw;
+setCustomer(custObj ?? null);
+
+const siteRaw = (note as any)?.site_customer;
+const siteObj = Array.isArray(siteRaw) ? siteRaw[0] : siteRaw;
+setSiteCustomer(siteObj ?? null);
 
     const { data: w } = await supabase
       .from("delivery_worker_entries")
@@ -198,6 +217,24 @@ const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
             </p>
           )}
         </section>
+          
+          {/* Einsatzort */}
+          <section className="mt-6">
+             <h2 className="font-semibold text-gray-200">Einsatzort</h2>
+           {siteCustomer ? (
+             <p className="text-gray-300">
+                {siteCustomer.name}
+               <br />
+               {siteCustomer.street}
+                <br />
+                {siteCustomer.zip} {siteCustomer.city}
+               <br />
+                {siteCustomer.email}
+              </p>
+           ) : (
+             <p className="text-gray-400 italic">— kein Einsatzort ausgewählt —</p>
+           )}
+          </section>
 
         {/* Mitarbeiter */}
         <section className="mt-6">

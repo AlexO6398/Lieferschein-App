@@ -18,6 +18,13 @@ type BuildPdfArgs = {
     city?: string | null;
     email?: string | null;
   } | null;
+  siteCustomer?: {
+  name?: string | null;
+  street?: string | null;
+  zip?: string | null;
+  city?: string | null;
+  email?: string | null;
+    } | null;
   workers: Array<{ name: string; hours: number | null }>;
   machines: Array<{ name: string; qty: number | null; unit: string | null }>;
   materials: Array<{ name: string; qty: number | null; unit: string | null }>;
@@ -205,6 +212,38 @@ customerLines.forEach((l) => {
 y -= 8;
 drawHrAtCursor();
 y -= 18;
+
+
+
+// ---------------------------
+// Einsatzort (optional)
+// ------------------------------
+const s = args.siteCustomer;
+const siteLines = s
+  ? [
+      s?.name ?? "",
+      s?.street ?? "",
+      `${s?.zip ?? ""} ${s?.city ?? ""}`.trim(),
+      s?.email ?? "",
+    ].filter(Boolean)
+  : [];
+
+if (siteLines.length > 0) {
+  text(page, "Einsatzort", margin, y, 12, true);
+  y -= 14;
+
+  ensureSpace(siteLines.length * 14 + 40);
+
+  siteLines.forEach((l) => {
+    text(page, l, margin, y, 11);
+    y -= 14;
+  });
+
+  y -= 8;
+  drawHrAtCursor();
+  y -= 18;
+}
+
 
 // ------------------------------
 // Table drawing with pagination + clean grid
