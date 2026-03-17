@@ -562,11 +562,40 @@ const addCustomer = async () => {
         className="p-1 bg-gray-900 border border-gray-700 rounded"
       />
 
-      <input
+      <select
         value={row.unit}
         onChange={(e) => updateRow(i, rIdx, "unit", e.target.value)}
-        className="p-1 bg-gray-900 border border-gray-700 rounded"
-      />
+        className="p-1 bg-gray-900 border border-gray-700 rounded text-gray-100"
+      >
+        <option value="">—</option>
+        <optgroup label="Zeit">
+          <option value="Std.">Std.</option>
+          <option value="Tag">Tag</option>
+          <option value="Woche">Woche</option>
+          <option value="Monat">Monat</option>
+        </optgroup>
+        <optgroup label="Länge / Fläche / Volumen">
+          <option value="lfm">lfm</option>
+          <option value="m²">m²</option>
+          <option value="m³">m³</option>
+          <option value="mm">mm</option>
+          <option value="cm">cm</option>
+          <option value="m">m</option>
+        </optgroup>
+        <optgroup label="Gewicht / Menge">
+          <option value="Stk.">Stk.</option>
+          <option value="to">to</option>
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="l">l</option>
+        </optgroup>
+        <optgroup label="Sonstiges">
+          <option value="PAU">PAU</option>
+          <option value="Set">Set</option>
+          <option value="VPE">VPE</option>
+          <option value="Paar">Paar</option>
+        </optgroup>
+      </select>
 
       <input
         value={row.article}

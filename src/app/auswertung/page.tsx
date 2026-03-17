@@ -6,12 +6,18 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Role = "office" | "field";
 
+type Customer = {
+  id: string;
+  name: string;
+};
+
 type DeliveryWorkerEntryRow = {
   hours: number | null;
 
   delivery_notes: {
     note_date: string | null;
     status: string;
+    customer_id: string | null;
   } | null;
 
   workers: {
@@ -76,6 +82,9 @@ export default function AuswertungPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerId, setCustomerId] = useState<string>("");
+
   const [entries, setEntries] = useState<DeliveryWorkerEntryRow[]>([]);
   const [openEmployees, setOpenEmployees] = useState<Record<string, boolean>>({});
 
@@ -112,6 +121,14 @@ export default function AuswertungPage() {
       }
 
       setLoadingRole(false);
+
+      // Kunden für Filter laden
+      const { data: customerData } = await supabase
+        .from("customers")
+        .select("id,name")
+        .eq("is_archived", false)
+        .order("name", { ascending: true });
+      setCustomers((customerData as Customer[]) ?? []);
     };
 
     init();
@@ -123,22 +140,25 @@ export default function AuswertungPage() {
     setLoading(true);
 
     try {
-      // inclusive range: dateTo + 1 Tag als upper bound (supabase uses lt/gt gut)
       const from = dateFrom;
       const toNext = toYmd(new Date(parseYmdLocal(dateTo).getTime() + 24 * 60 * 60 * 1000));
 
-      // ✅ Wir werten standardmäßig NUR final aus (typisch gewünscht).
-      // Wenn du auch draft willst: .in("status", ["final","draft"])
-      const { data, error } = await supabase
+      let q = supabase
         .from("delivery_worker_entries")
-        .select("hours,delivery_notes(note_date,status),workers(name)")
+        .select("hours,delivery_notes(note_date,status,customer_id),workers(name)")
         .in("delivery_notes.status", ["final", "archive"])
         .gte("delivery_notes.note_date", from)
         .lt("delivery_notes.note_date", toNext)
         .order("created_at", { ascending: true });
 
+      if (customerId) {
+        q = q.eq("delivery_notes.customer_id", customerId);
+      }
+
+      const { data, error } = await q;
+
       if (error) throw error;
-setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
+      setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
     } catch (e: any) {
       setError(e?.message ?? "Fehler beim Laden");
       setEntries([]);
@@ -235,38 +255,36 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
     return out;
   }, [entries, dateFrom, dateTo]);
 
-  const downloadCsv = () => {
-    // CSV: Employee, TotalHours, Date, Weekday, Hours
-    const rows: string[] = [];
-    rows.push(["Mitarbeiter", "Summe Stunden", "Datum", "Wochentag", "Stunden"].join(";"));
+  const downloadXlsx = async () => {
+    try {
+      const res = await fetch("/api/export-xlsx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateFrom, dateTo, customerId }),
+      });
 
-    const formatHoursAT = (n: number) =>
-  n.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-    for (const emp of report) {
-      // optional: 1 Summary row
-      rows.push([emp.name, formatHoursAT(emp.totalHours), "", "", ""].join(";"));
-      for (const d of emp.days) {
-        rows.push([
-          emp.name,
-          formatHoursAT(emp.totalHours),
-          formatDateAT(d.dateYmd),
-          d.weekday,
-          formatHoursAT(d.hours),
-        ].join(";"));
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j.error ?? "Export fehlgeschlagen");
+        return;
       }
-    }
 
-    const csv = "\uFEFF" + rows.join("\n"); // BOM für Excel
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `auswertung_${dateFrom}_bis_${dateTo}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      const customerSuffix = customerId
+        ? `_${customers.find((c) => c.id === customerId)?.name?.replace(/[^\w]/g, "_") ?? customerId}`
+        : "";
+      a.download = `zeitaufzeichnung${customerSuffix}_${dateFrom}_bis_${dateTo}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(e.message ?? "Export fehlgeschlagen");
+    }
   };
 
   if (loadingRole || !role) {
@@ -308,7 +326,7 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
           )}
 
           {/* Filter */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-end">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto_auto] gap-3 items-end">
             <label className="text-sm text-gray-200">
               von
               <input
@@ -329,6 +347,22 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
               />
             </label>
 
+            <label className="text-sm text-gray-200">
+              Kunde
+              <select
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                className="mt-1 w-full rounded px-3 py-2 text-sm bg-gray-900 border border-gray-700 text-gray-100"
+              >
+                <option value="">— Alle Kunden —</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <button
               type="button"
               onClick={loadData}
@@ -340,11 +374,11 @@ setEntries(((data as any) ?? []) as DeliveryWorkerEntryRow[]);
 
             <button
               type="button"
-              onClick={downloadCsv}
+              onClick={downloadXlsx}
               disabled={loading || report.length === 0}
               className="px-5 py-3 rounded border border-gray-700 bg-gray-900 hover:bg-gray-800 disabled:opacity-60"
             >
-              CSV herunterladen
+              Excel herunterladen
             </button>
           </div>
         </div>
