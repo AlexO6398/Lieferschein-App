@@ -113,10 +113,10 @@ export async function POST(req: NextRequest) {
       // Zeile 3: Dienstnehmer
       ws.getCell("A3").value = "Dienstnehmer:";
       ws.getCell("A3").font = { bold: true, name: "Arial" };
-      ws.mergeCells("A4:E4");
-      ws.getCell("A4").value = empName;
-      ws.getCell("A4").font = { bold: true, size: 12, name: "Arial" };
-      ws.getCell("A4").border = { bottom: thinBorder };
+      ws.mergeCells("B3:F3");
+      ws.getCell("B3").value = empName;
+      ws.getCell("B3").font = { bold: true, size: 12, name: "Arial" };
+      ws.getCell("B3").border = { bottom: thinBorder };
 
       // Zeile 4: Monat
       ws.getCell("G4").value = "Monat:";
@@ -195,17 +195,17 @@ export async function POST(req: NextRequest) {
           row.getCell(5).value = calcEndExcelTime(netHours);
           row.getCell(5).numFmt = "h:mm";
           row.getCell(5).alignment = { horizontal: "center" };
+
+          // Pause: 1h mit Formel + result für Vercel
+          row.getCell(6).value = { formula: `IF(ISBLANK(E${rowIdx}),0,$G$5)`, result: 1 / 24 };
+          row.getCell(6).numFmt = "h:mm";
+          row.getCell(6).alignment = { horizontal: "center" };
+
+          // Arbeitsstunden: Formel + result für Vercel
+          row.getCell(7).value = { formula: `E${rowIdx}-D${rowIdx}-F${rowIdx}`, result: netHours / 24 };
+          row.getCell(7).numFmt = "h:mm";
+          row.getCell(7).alignment = { horizontal: "center" };
         }
-
-        // Pause (0 wenn kein Ende)
-        row.getCell(6).value = { formula: `IF(ISBLANK(E${rowIdx}),0,$G$5)` };
-        row.getCell(6).numFmt = "h:mm";
-        row.getCell(6).alignment = { horizontal: "center" };
-
-        // Arbeitsstunden = Ende - Beginn - Pause = Nettostunden
-        row.getCell(7).value = { formula: `IF(ISBLANK(E${rowIdx}),"",E${rowIdx}-D${rowIdx}-F${rowIdx})` };
-        row.getCell(7).numFmt = "h:mm";
-        row.getCell(7).alignment = { horizontal: "center" };
       }
 
       // Summenzeile
@@ -218,8 +218,16 @@ export async function POST(req: NextRequest) {
         cell.font = { bold: true, name: "Arial", size: 10 };
       }
       ws.getCell(`C${sumRow}`).value = "Summe";
-      for (const col of ["G", "H", "I", "J"]) {
-        ws.getCell(`${col}${sumRow}`).value = { formula: `SUM(${col}8:${col}${sumRow - 1})` };
+
+      // Summe G (Arbeitsstunden) mit Formel + result
+      let totalNetHours = 0;
+      for (const h of perDay.values()) totalNetHours += h;
+      ws.getCell(`G${sumRow}`).value = { formula: `SUM(G8:G${sumRow - 1})`, result: totalNetHours / 24 };
+      ws.getCell(`G${sumRow}`).numFmt = "[h]:mm";
+      ws.getCell(`G${sumRow}`).alignment = { horizontal: "center" };
+      // Summe H, I, J (Urlaub, Krank, Feiertag) - Wert 0 da nicht erfasst
+      for (const col of ["H", "I", "J"]) {
+        ws.getCell(`${col}${sumRow}`).value = { formula: `SUM(${col}8:${col}${sumRow - 1})`, result: 0 };
         ws.getCell(`${col}${sumRow}`).numFmt = "[h]:mm";
         ws.getCell(`${col}${sumRow}`).alignment = { horizontal: "center" };
       }
@@ -234,7 +242,7 @@ export async function POST(req: NextRequest) {
         cell.font = { bold: true, name: "Arial", size: 10 };
       }
       ws.getCell(`C${totalRow}`).value = "Summe Gesamt An- und Abwesenheit";
-      ws.getCell(`H${totalRow}`).value = { formula: `G${sumRow}+H${sumRow}+I${sumRow}+J${sumRow}` };
+      ws.getCell(`H${totalRow}`).value = { formula: `G${sumRow}+H${sumRow}+I${sumRow}+J${sumRow}`, result: totalNetHours / 24 };
       ws.getCell(`H${totalRow}`).numFmt = "[h]:mm";
       ws.getCell(`H${totalRow}`).alignment = { horizontal: "center" };
     }
