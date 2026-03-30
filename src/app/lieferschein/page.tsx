@@ -29,8 +29,14 @@ const [notes, setNotes] = useState<DeliveryNote[]>([]);
   const [search, setSearch] = useState("");
 
   // neu: Datum von/bis (YYYY-MM-DD aus <input type="date">)
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+  const [dateTo, setDateTo] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
+  });
 
 
   const router = useRouter();
@@ -69,7 +75,7 @@ let q = supabase
   "id,status,note_date,note_number,owner_id,customers:customers!delivery_notes_customer_id_fkey(name),profiles:profiles!delivery_notes_owner_id_fkey(email)"
 )
   .order("created_at", { ascending: false })
-  .limit(20);
+
 
 // FIELD: nur eigene
 if (roleValue === "field") {
