@@ -592,6 +592,16 @@ className="px-3 py-3 w-[140px] rounded bg-black text-white"
       </button>
 )}
 
+{role === "office" && n.status === "final" && (
+      <button
+        onClick={() => openNote(n.id, n.status)}
+className="px-3 py-3 w-[140px] rounded bg-black text-white"
+
+      >
+        Einsatz Öffnen
+      </button>
+)}
+
 {n.status !== "draft" && (
       <button
         onClick={() => openPdf(n.id)}
